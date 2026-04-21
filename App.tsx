@@ -5,6 +5,7 @@
 */
 
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import { cn } from './lib/utils';
@@ -41,6 +42,39 @@ import { subscribeToNotifications, markNotificationAsRead } from './services/fir
 
 type Page = 'dashboard' | 'billing' | 'guests' | 'rooms' | 'reports' | 'settings' | 'comms' | 'staff' | 'mural';
 type UserRole = 'admin' | 'staff';
+
+const AppBackground = () => {
+  const [index, setIndex] = useState(0);
+  const bgImages = [
+    "https://i.ibb.co/7xDTxMQs/img1.png",
+    "https://i.ibb.co/zVHPNKTp/img2.png",
+    "https://i.ibb.co/TBWTGLd9/img3.png",
+    "https://i.ibb.co/zWs47JKX/img4.png",
+    "https://i.ibb.co/TMrQRmDP/img5.png",
+    "https://i.ibb.co/gMkwHHYH/img6.png"
+  ];
+  
+  useEffect(() => {
+    const timer = setInterval(() => setIndex(p => (p + 1) % bgImages.length), 10000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-0 pointer-events-none opacity-[0.03]">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={index}
+          initial={{ opacity: 0, scale: 1.1 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.9 }}
+          transition={{ duration: 4, ease: "easeInOut" }}
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${bgImages[index]})` }}
+        />
+      </AnimatePresence>
+    </div>
+  );
+};
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
@@ -123,16 +157,15 @@ const App: React.FC = () => {
         <div className="flex flex-col items-center gap-4 mb-4 text-center">
           <div className="w-20 h-20 bg-surface-bright border border-outline-variant/10 p-2 flex items-center justify-center overflow-hidden shadow-[0_0_30px_rgba(255,107,0,0.2)] hover:scale-105 transition-all duration-700">
             <img 
-              src="https://ibb.co/sdggPPwX" 
+              src="https://i.ibb.co/sdggPPwX/logo.png" 
               alt="Casa Mãe Logo" 
               className="w-full h-full object-contain"
               referrerPolicy="no-referrer"
-              onError={(e) => { e.currentTarget.src = "https://i.ibb.co/sdggPPwX/logo.png"; }}
             />
           </div>
           <div>
-            <h1 className="font-headline italic text-primary text-3xl font-black tracking-tight leading-none drop-shadow-sm">A CASA MÃE</h1>
-            <p className="font-body text-[8px] font-black uppercase tracking-[0.4em] text-secondary mt-2 text-glow">BFV-BEIB FRANCISCO VIANA</p>
+            <h1 className="font-headline text-primary text-3xl font-black tracking-tight leading-none drop-shadow-sm">A CASA MÃE</h1>
+            <p className="font-body text-[8px] font-black uppercase tracking-[0.4em] text-glow">BFV-BEIB FRANCISCO VIANA</p>
           </div>
         </div>
       </div>
@@ -241,46 +274,52 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-surface font-body text-on-surface overflow-hidden">
-      {/* Sidebar Overlay */}
-      <aside className="hidden lg:block w-64 shrink-0 h-full">
+      <AppBackground />
+      {/* Sidebar Overlay for Mobile */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[90] lg:hidden"
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Sidebar Content */}
+      <aside className={cn(
+        "fixed inset-y-0 left-0 z-[100] w-72 bg-surface-container border-r border-outline-variant/10 transition-transform duration-500 transform lg:relative lg:translate-x-0 lg:z-0",
+        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
         <SidebarContent />
       </aside>
 
-      {/* Mobile Sidebar */}
-      {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-[100] lg:hidden">
-           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)}></div>
-           <aside className="absolute left-0 top-0 bottom-0 w-72 bg-surface animate-in slide-in-from-left duration-500">
-              <SidebarContent />
-           </aside>
-        </div>
-      )}
-
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col min-w-0 h-screen relative">
-        {/* Atelier Header */}
-        <header className="h-16 shrink-0 bg-surface/80 backdrop-blur-xl border-b border-outline-variant/5 flex items-center justify-between px-6 lg:px-10 z-50 sticky top-0">
+        {/* Header Principal Casa Mãe */}
+        <header className="h-20 lg:h-24 shrink-0 bg-surface/80 backdrop-blur-xl border-b border-outline-variant/10 flex items-center justify-between px-6 lg:px-12 z-50 sticky top-0">
           <div className="flex items-center gap-6">
             <button 
                onClick={() => setIsMobileMenuOpen(true)}
-               className="lg:hidden p-2 text-on-surface-variant/60 hover:text-primary transition-colors"
+               className="lg:hidden p-3 bg-surface border border-outline-variant/10 text-primary shadow-lg"
             >
               <Menu size={20} />
             </button>
             
-            <div className="flex items-center gap-4 hidden md:flex group cursor-pointer">
-              <div className="w-10 h-10 hover:scale-110 transition-transform duration-500">
+            <div className="flex items-center gap-6 hidden sm:flex group cursor-pointer relative">
+              <div className="w-12 h-12 lg:w-14 lg:h-14 hover:rotate-6 transition-all duration-700 bg-white/5 p-2 border border-outline-variant/10">
                 <img 
-                  src="https://ibb.co/sdggPPwX" 
-                  alt="CM" 
+                  src="https://i.ibb.co/sdggPPwX/logo.png" 
+                  alt="A Casa Mãe" 
                   className="w-full h-full object-contain"
                   referrerPolicy="no-referrer"
-                  onError={(e) => { e.currentTarget.src = "https://i.ibb.co/sdggPPwX/logo.png"; }}
                 />
               </div>
               <div className="flex flex-col">
-                <span className="font-headline italic text-primary text-2xl tracking-tighter leading-none font-bold">A CASA MÃE</span>
-                <span className="text-[7px] text-secondary font-black uppercase tracking-widest mt-0.5">BFV-BEIB FRANCISCO VIANA</span>
+                <span className="font-headline text-primary text-3xl lg:text-4xl tracking-tighter leading-none font-black drop-shadow-md text-glow">A CASA MÃE</span>
+                <span className="text-[7px] lg:text-[8px] text-secondary font-black uppercase tracking-[0.4em] mt-1">BFV-BEIB FRANCISCO VIANA</span>
               </div>
             </div>
             
@@ -309,11 +348,11 @@ const App: React.FC = () => {
               {isNotificationTrayOpen && (
                 <div className="absolute right-0 mt-6 w-80 bg-surface-container border border-outline-variant/10 rounded-sm shadow-2xl overflow-hidden z-[100] animate-in fade-in slide-in-from-top-4">
                    <div className="p-5 border-b border-outline-variant/10 bg-surface-bright/20">
-                      <h3 className="text-[10px] font-black text-secondary uppercase tracking-[0.2em] italic">Notificações Command Center</h3>
+                      <h3 className="text-[10px] font-black text-secondary uppercase tracking-[0.2em]">Notificações Command Center</h3>
                    </div>
                    <div className="max-h-[70vh] overflow-y-auto custom-scrollbar">
                       {notifications.length === 0 ? (
-                        <div className="p-12 text-center text-on-surface-variant/20 text-[9px] uppercase tracking-widest italic">Nenhuma atividade detectada</div>
+                        <div className="p-12 text-center text-on-surface-variant/20 text-[9px] uppercase tracking-widest">Nenhuma atividade detectada</div>
                       ) : (
                         notifications.map((n) => (
                           <div 
@@ -347,7 +386,7 @@ const App: React.FC = () => {
 
             <div className="flex items-center gap-4 pl-4 border-l border-outline-variant/10">
               <div className="text-right hidden sm:block">
-                <p className="text-xs font-headline italic tracking-wide leading-none">{user.displayName || 'Manager'}</p>
+                <p className="text-xs font-headline tracking-wide leading-none">{user.displayName || 'Manager'}</p>
                 <p className="text-[9px] text-primary font-bold uppercase tracking-widest mt-1 opacity-60">
                    {userRole === 'admin' ? 'Director Executivo' : 'Operações'}
                 </p>
@@ -356,7 +395,7 @@ const App: React.FC = () => {
                 {user.photoURL ? (
                   <img src={user.photoURL} alt="Profile" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                 ) : (
-                  <span className="font-headline italic text-lg text-primary">{user.displayName?.[0] || 'A'}</span>
+                  <span className="font-headline text-lg text-primary">{user.displayName?.[0] || 'A'}</span>
                 )}
               </div>
             </div>
@@ -366,9 +405,9 @@ const App: React.FC = () => {
         {/* Dynamic Content Canvas */}
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-10 bg-surface">
            <div className="max-w-7xl mx-auto pb-12">
-              <div className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+               <div className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                  <div>
-                    <h2 className="font-headline text-5xl lg:text-7xl font-black tracking-tight text-primary italic drop-shadow-md">
+                    <h2 className="font-headline text-5xl lg:text-7xl font-black tracking-tight text-primary drop-shadow-md">
                       {currentPage === 'comms' ? 'Tempo de Serviço' : 
                        currentPage === 'guests' ? 'Registo de Hóspedes' :
                        currentPage === 'dashboard' ? 'Centro de Comando' : 
@@ -396,24 +435,20 @@ const App: React.FC = () => {
                Operacional
             </span>
             <span className="hidden sm:inline">Latência: <span className="text-secondary/50 font-bold">12ms</span></span>
-            <span className="text-primary/40 font-black italic">Casa Mãe v2.4.0 BFV</span>
+            <span className="text-primary/40 font-black">Casa Mãe v2.4.0 BFV</span>
           </div>
           
           {/* Watermark Logo */}
           <div className="absolute right-1/2 translate-x-1/2 bottom-2 h-12 opacity-10 pointer-events-none mix-blend-overlay">
             <img 
-              src="https://ibb.co/BVY4mTqq" 
+              src="https://i.ibb.co/BVY4mTqq/logo.png" 
               alt="Casa Mãe Logo" 
               className="h-full object-contain"
               referrerPolicy="no-referrer"
-              onError={(e) => {
-                // Fallback for ImgBB direct link if the splash page doesn't render
-                e.currentTarget.src = "https://i.ibb.co/BVY4mTqq/logo.png";
-              }}
             />
           </div>
 
-          <div className="flex items-center space-x-4 italic">
+          <div className="flex items-center space-x-4">
             <span>GMT {new Date().getHours()}:{new Date().getMinutes()}</span>
           </div>
         </footer>

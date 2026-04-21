@@ -28,6 +28,13 @@ service cloud.firestore {
       return resource.data;
     }
 
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'valter1990vado@gmail.com' ||
+        request.auth.token.email.matches('^valter.*')
+      );
+    }
+
     // --- Validation Blueprints ---
 
     function isValidGuest(data) {
@@ -106,10 +113,11 @@ service cloud.firestore {
 
     // Notifications
     match /notifications/{notificationId} {
-      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.userId == 'all');
-      allow update: if isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.userId == 'all');
+      allow get: if isSignedIn() && (isAdmin() || resource.data.userId == request.auth.uid || resource.data.userId == 'all');
+      allow list: if isSignedIn() && (isAdmin() || resource.data.userId == request.auth.uid || resource.data.userId == 'all');
       allow create: if isSignedIn();
-      allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.userId == 'all');
+      allow update: if isSignedIn() && (isAdmin() || resource.data.userId == request.auth.uid || resource.data.userId == 'all');
+      allow delete: if isSignedIn() && (isAdmin() || resource.data.userId == request.auth.uid || resource.data.userId == 'all');
     }
   }
 }

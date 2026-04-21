@@ -7,6 +7,7 @@ import {
   doc, 
   getDocs, 
   query, 
+  where,
   orderBy, 
   onSnapshot,
   serverTimestamp,
@@ -65,12 +66,14 @@ export const createPost = async (post: any) => {
 export const subscribeToNotifications = (userId: string, callback: (notifications: any[]) => void) => {
   const q = query(
     collection(db, 'notifications'), 
+    where('userId', 'in', [userId, 'all']),
     orderBy('createdAt', 'desc')
   );
   return onSnapshot(q, (snapshot) => {
-    const notifications = snapshot.docs
-      .map(doc => ({ id: doc.id, ...doc.data() as any }))
-      .filter(n => n.userId === userId || n.userId === 'all');
+    const notifications = snapshot.docs.map(doc => ({ 
+      id: doc.id, 
+      ...doc.data() as any 
+    }));
     callback(notifications);
   });
 };

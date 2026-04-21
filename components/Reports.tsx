@@ -73,20 +73,20 @@ const Reports: React.FC = () => {
   return (
     <div className="space-y-16 pb-32">
       {/* Header Filters */}
-      <div className="bg-surface-container border border-outline-variant/10 p-8 shadow-2xl flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-8">
+      <div className="bg-surface-container-low border border-outline-variant/10 p-8 shadow-2xl flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-8">
         <div className="flex flex-col sm:flex-row sm:items-center gap-6">
           <div className="flex items-center gap-3">
             <Calendar size={18} className="text-primary" />
-            <span className="font-body text-[10px] font-bold text-on-surface-variant/40 uppercase tracking-widest italic">Filtro Temporal:</span>
+            <span className="font-body text-[10px] font-black text-on-surface-variant/40 uppercase tracking-widest">Filtro Temporal:</span>
           </div>
-          <div className="flex bg-surface-bright/5 p-1 border border-outline-variant/10">
+          <div className="flex bg-surface-bright/50 p-1">
             {(['daily', 'weekly', 'monthly', 'quarterly', 'yearly'] as ReportPeriod[]).map((p) => (
                <button 
                   key={p}
                   onClick={() => setPeriod(p)}
                   className={cn(
-                    "px-6 py-2 text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap italic underline decoration-transparent decoration-2 underline-offset-8 decoration-primary/0",
-                    period === p ? "text-on-surface underline-primary/100" : "text-on-surface-variant/20 hover:text-on-surface"
+                    "px-6 py-2 text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-b-2 decoration-transparent decoration-2 underline-offset-8",
+                    period === p ? "text-primary border-primary" : "text-on-surface-variant/40 border-transparent hover:text-on-surface"
                   )}
                >
                  {p}
@@ -98,11 +98,11 @@ const Reports: React.FC = () => {
         <div className="flex gap-4">
           <button 
             onClick={handleGenerateDailyPDF}
-            className="flex-1 sm:flex-none px-8 py-3 border border-outline-variant/20 text-on-surface-variant/40 hover:text-primary transition-all font-body text-[10px] uppercase tracking-widest italic"
+            className="flex-1 sm:flex-none px-8 py-3 border border-gray-200 text-gray-500 hover:text-primary transition-all font-body text-[10px] uppercase tracking-widest"
           >
             <FileDown size={14} className="inline mr-2" /> Resumo
           </button>
-          <button className="flex-1 sm:flex-none px-10 py-3 bg-on-surface text-surface font-black text-[10px] uppercase tracking-widest hover:bg-primary transition-all italic underline decoration-surface/20 underline-offset-8">
+          <button className="flex-1 sm:flex-none px-10 py-3 bg-surface text-white font-black text-[10px] uppercase tracking-widest hover:bg-primary transition-all underline decoration-white/20 underline-offset-8">
             <Download size={14} className="inline mr-2" /> Exportar Auditoria
           </button>
         </div>
@@ -110,18 +110,18 @@ const Reports: React.FC = () => {
 
       {/* Main Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-        <div className="bg-surface-container p-10 border border-outline-variant/10 shadow-2xl relative overflow-hidden group">
+        <div className="bg-surface-container-low p-10 border border-outline-variant/10 shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 left-0 w-1 h-full bg-primary/10"></div>
           <div className="flex justify-between items-start mb-12 relative z-10">
              <div>
-                <h3 className="font-headline italic text-4xl text-on-surface tracking-wide font-black drop-shadow-md text-glow">Fluxo de Receita</h3>
-                <p className="font-body text-[9px] text-on-surface-variant/40 mt-1 uppercase font-bold tracking-widest italic">Relatório Casa Mãe BFV • {periodLabels[period]}</p>
+                <h3 className="font-headline text-4xl text-on-surface tracking-wide font-black drop-shadow-md">Fluxo de Receita</h3>
+                <p className="font-body text-[9px] text-on-surface-variant/40 mt-1 uppercase font-bold tracking-widest">Relatório Casa Mãe BFV • {periodLabels[period]}</p>
              </div>
              <div className="text-right">
-                <span className="font-headline italic text-3xl text-primary tracking-tight">
+                <span className="font-headline text-3xl text-primary tracking-tight">
                    {period === 'daily' ? '+5.2%' : period === 'weekly' ? '+12.4%' : '+18.4%'}
                 </span>
-                <p className="font-body text-[8px] text-emerald-500 font-black uppercase tracking-widest mt-1 italic">Índice Amostra</p>
+                <p className="font-body text-[8px] text-emerald-600 font-black uppercase tracking-widest mt-1">Índice Amostra</p>
              </div>
           </div>
           <div className="h-[340px] w-full relative z-10">
@@ -133,18 +133,18 @@ const Reports: React.FC = () => {
                     <stop offset="95%" stopColor="#FF6B00" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="0" vertical={false} stroke="#ffffff05" />
+                <CartesianGrid strokeDasharray="0" vertical={false} stroke="#00000005" />
                 <XAxis 
                    dataKey="name" 
                    axisLine={false} 
                    tickLine={false} 
-                   tick={{fontSize: 9, fill: '#646464', fontWeight: '700', fontStyle: 'italic'}}
+                   tick={{fontSize: 9, fill: '#646464', fontWeight: '700'}}
                    dy={15}
                 />
                 <YAxis 
                    axisLine={false} 
                    tickLine={false} 
-                   tick={{fontSize: 9, fill: '#646464', fontWeight: '700', fontStyle: 'italic'}}
+                   tick={{fontSize: 9, fill: '#646464', fontWeight: '700'}}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Area 
@@ -160,14 +160,14 @@ const Reports: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-surface-container p-10 border border-outline-variant/10 shadow-2xl relative overflow-hidden group">
+        <div className="bg-surface-container-low p-10 border border-outline-variant/10 shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 left-0 w-1 h-full bg-secondary/10"></div>
           <div className="flex justify-between items-center mb-12 relative z-10">
              <div>
-                <h3 className="font-headline italic text-4xl text-on-surface tracking-wide font-black drop-shadow-md text-glow text-secondary">Distribuição por Sector</h3>
-                <p className="font-body text-[9px] text-on-surface-variant/40 mt-1 uppercase font-bold tracking-widest italic">Auditoria de Divisões Operacionais</p>
+                <h3 className="font-headline text-4xl text-on-surface tracking-wide font-black drop-shadow-md text-secondary">Distribuição por Sector</h3>
+                <p className="font-body text-[9px] text-on-surface-variant/40 mt-1 uppercase font-bold tracking-widest">Auditoria de Divisões Operacionais</p>
              </div>
-             <div className="p-3 text-primary bg-primary/5 italic border border-primary/10">
+             <div className="p-3 text-primary bg-primary/5 border border-primary/10">
                 <TrendingUp size={16} />
              </div>
           </div>
@@ -197,9 +197,9 @@ const Reports: React.FC = () => {
                  <div key={i} className="text-center sm:text-left">
                     <div className="flex items-center justify-center sm:justify-start gap-3 mb-2">
                        <div className="w-1.5 h-1.5 rounded-full" style={{backgroundColor: COLORS[i]}}></div>
-                       <span className="font-body text-[9px] font-bold text-on-surface-variant/40 uppercase tracking-[0.2em] italic">{item.name}</span>
+                       <span className="font-body text-[9px] font-black text-on-surface-variant/40 uppercase tracking-[0.2em]">{item.name}</span>
                     </div>
-                    <p className="font-headline italic text-2xl text-on-surface leading-none tracking-tight">{item.value}</p>
+                    <p className="font-headline text-2xl text-on-surface leading-none tracking-tight">{item.value}</p>
                  </div>
                ))}
             </div>
@@ -208,38 +208,38 @@ const Reports: React.FC = () => {
       </div>
 
       {/* Summary Metrics Table */}
-      <div className="bg-surface-container border border-outline-variant/10 shadow-2xl overflow-hidden">
+      <div className="bg-surface-container-low border border-outline-variant/10 shadow-2xl overflow-hidden">
         <div className="p-10 border-b border-outline-variant/10 flex justify-between items-center bg-surface-bright/5">
            <div className="flex items-center gap-4">
               <div className="w-1 h-8 bg-primary"></div>
-              <h3 className="font-headline italic text-4xl text-on-surface tracking-wide font-black drop-shadow-md text-glow">Consolidado Casa Mãe</h3>
+              <h3 className="font-headline text-4xl text-on-surface tracking-wide font-black drop-shadow-md">Consolidado Casa Mãe</h3>
            </div>
-           <p className="font-body text-[9px] text-on-surface-variant/40 font-bold uppercase tracking-[0.4em] italic leading-none">Última Sincronização: 12:45 GMT</p>
+           <p className="font-body text-[9px] text-on-surface-variant/40 font-bold uppercase tracking-[0.4em] leading-none">Última Sincronização: 12:45 GMT</p>
         </div>
         <div className="overflow-x-auto">
            <table className="w-full text-left">
               <thead>
-                 <tr className="bg-surface-container-low border-b border-outline-variant/5">
-                    <th className="px-10 py-5 font-body text-[9px] uppercase tracking-[0.2em] text-on-surface-variant/60">Cronologia</th>
-                    <th className="px-10 py-5 font-body text-[9px] uppercase tracking-[0.2em] text-on-surface-variant/60 text-right">Volume Total</th>
-                    <th className="px-10 py-5 font-body text-[9px] uppercase tracking-[0.2em] text-on-surface-variant/60 text-center">Audit. Ocupação</th>
-                    <th className="px-10 py-5 font-body text-[9px] uppercase tracking-[0.2em] text-on-surface-variant/60 text-right">Ticket Médio</th>
-                    <th className="px-10 py-5 font-body text-[9px] uppercase tracking-[0.2em] text-on-surface-variant/60">Tendência</th>
+                 <tr className="bg-surface-bright/5 border-b border-outline-variant/5">
+                    <th className="px-10 py-5 font-body text-[9px] uppercase tracking-[0.2em] text-on-surface-variant/40">Cronologia</th>
+                    <th className="px-10 py-5 font-body text-[9px] uppercase tracking-[0.2em] text-on-surface-variant/40 text-right">Volume Total</th>
+                    <th className="px-10 py-5 font-body text-[9px] uppercase tracking-[0.2em] text-on-surface-variant/40 text-center">Audit. Ocupação</th>
+                    <th className="px-10 py-5 font-body text-[9px] uppercase tracking-[0.2em] text-on-surface-variant/40 text-right">Ticket Médio</th>
+                    <th className="px-10 py-5 font-body text-[9px] uppercase tracking-[0.2em] text-on-surface-variant/40">Tendência</th>
                  </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant/5">
                  {[...data].reverse().map((row, i) => (
-                    <tr key={i} className="hover:bg-surface-bright/5 transition-colors group">
-                       <td className="px-10 py-6 font-headline italic text-xl text-on-surface group-hover:text-primary transition-colors tracking-wide">Ciclo {row.name}</td>
+                    <tr key={i} className="hover:bg-primary/5 transition-colors group">
+                       <td className="px-10 py-6 font-headline text-xl text-on-surface group-hover:text-primary transition-colors tracking-wide">Ciclo {row.name}</td>
                        <td className="px-10 py-6 font-body text-sm font-bold text-on-surface text-right tracking-tight">{formatCurrency(row.revenue)}</td>
                        <td className="px-10 py-6 text-center">
-                          <span className="font-body text-[10px] font-bold text-on-surface-variant/40 uppercase tracking-widest italic px-4 py-2 bg-surface-bright/5 border border-outline-variant/5">
+                          <span className="font-body text-[10px] font-bold text-on-surface-variant/40 uppercase tracking-widest px-4 py-2 bg-surface-bright border border-outline-variant/10">
                              {80 + i * 2}% Ocupação
                           </span>
                        </td>
-                       <td className="px-10 py-6 font-body text-sm font-medium text-on-surface-variant/60 text-right tracking-tight italic">{formatCurrency(row.revenue / row.guests)}</td>
+                       <td className="px-10 py-6 font-body text-sm font-medium text-on-surface-variant/40 text-right tracking-tight">{formatCurrency(row.revenue / row.guests)}</td>
                        <td className="px-10 py-6">
-                          <div className="flex items-center gap-2 text-emerald-400 font-body font-bold text-[10px] uppercase tracking-widest italic">
+                          <div className="flex items-center gap-2 text-emerald-600 font-body font-bold text-[10px] uppercase tracking-widest">
                              <TrendingUp size={14} /> +{(Math.random() * 5 + 2).toFixed(1)}% Rendimento
                           </div>
                        </td>

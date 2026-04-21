@@ -1,6 +1,13 @@
 
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, browserPopupRedirectResolver } from 'firebase/auth';
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  browserPopupRedirectResolver, 
+  RecaptchaVerifier, 
+  signInWithPhoneNumber 
+} from 'firebase/auth';
 import { initializeFirestore, doc, getDocFromServer, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
@@ -11,7 +18,8 @@ const app = initializeApp(firebaseConfig);
 export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({
     tabManager: persistentMultipleTabManager()
-  })
+  }),
+  experimentalForceLongPolling: true, // Improved stability in some restricted network environments
 }, (firebaseConfig as any).firestoreDatabaseId || '(default)');
 
 export const auth = getAuth(app);
@@ -34,6 +42,9 @@ export const signInWithGoogle = async () => {
         console.warn("Usuário fechou a janela de autenticação.");
       } else if (error.code === 'auth/cancelled-popup-request') {
         console.warn("Solicitação de popup cancelada.");
+      } else if (error.code === 'auth/popup-blocked') {
+        console.error("Popup BLOQUEADO pelo navegador. Por favor, permita popups para este site ou abra o app em uma nova aba.");
+        throw new Error("POPUP_BLOCKED");
       } else {
         console.error("Erro ao autenticar com Google:", error);
       }
@@ -51,15 +62,15 @@ async function testConnection() {
   try {
     // Force a fresh fetch from server to verify connectivity
     await getDocFromServer(doc(db, '_internal_', 'connection_test'));
-    console.log("Firebase: Conexão estabelecida com sucesso.");
+    console.log("Firebase: Sincronização activa.");
   } catch (error: any) {
     if (error.code === 'unavailable') {
-      console.error("Firestore backend inacessível. Verifique a conexão de rede ou a configuração do banco de dados.");
+      console.warn("Firestore em modo offline (Backend demorou a responder).");
     } else if (error.code === 'permission-denied') {
       // This is actually a good sign - it means we reached the server and it rejected us (expected for _internal_)
-      console.log("Firebase: Servidor alcançado (Acesso negado conforme esperado).");
+      console.log("Firebase: Servidor alcançado.");
     } else {
-      console.warn("Firebase check:", error.message);
+      console.log("Firebase sync state:", error.code || 'waiting');
     }
   }
 }

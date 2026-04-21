@@ -1,101 +1,398 @@
 
-import React, { useState } from 'react';
-import { ShieldCheck, AlertCircle } from 'lucide-react';
-import { signInWithGoogle } from '../lib/firebase';
+import React, { useState, useEffect } from 'react';
+import { ShieldCheck, AlertCircle, Phone, ArrowRight, X, Mail, Lock } from 'lucide-react';
+import { signInWithGoogle, auth } from '../lib/firebase';
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const AuthScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [authMode, setAuthMode] = useState<'selection' | 'phone' | 'email'>('selection');
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [currentImgIndex, setCurrentImgIndex] = useState(0);
 
-  const handleLogin = async () => {
+  const images = [
+    "https://i.ibb.co/7xDTxMQs/img1.png",
+    "https://i.ibb.co/zVHPNKTp/img2.png",
+    "https://i.ibb.co/TBWTGLd9/img3.png",
+    "https://i.ibb.co/zWs47JKX/img4.png",
+    "https://i.ibb.co/TMrQRmDP/img5.png",
+    "https://i.ibb.co/gMkwHHYH/img6.png"
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentImgIndex((prev) => (prev + 1) % images.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleGoogleLogin = async () => {
     setIsLoading(true);
     setError(null);
     try {
       await signInWithGoogle();
     } catch (err: any) {
       if (err.code === 'auth/popup-closed-by-user') {
-        setError("AUTHENTICATION TERMINATED BY USER.");
+        setError("AUTENTICAÇÃO TERMINADA PELO UTILIZADOR.");
+      } else if (err.message === 'POPUP_BLOCKED' || err.code === 'auth/popup-blocked') {
+        setError("POPUP BLOQUEADO. Por favor, autorize popups ou abra o App em uma nova aba para entrar.");
       } else {
-        setError("SYSTEM ACCESS DENIED. VERIFY PROTOCOLS.");
+        setError("ERRO NO ACESSO GOOGLE. Tente novamente ou use outra aba.");
       }
       setIsLoading(false);
     }
   };
 
-  const logoUrl = "https://ibb.co/sdggPPwX";
-  const directLogoUrl = "https://i.ibb.co/sdggPPwX/logo.png";
+  const setupRecaptcha = () => {
+    if (!(window as any).recaptchaVerifier) {
+      (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'invisible',
+        'callback': () => {}
+      });
+    }
+  };
+
+  const handlePhoneAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    try {
+      setupRecaptcha();
+      const verifier = (window as any).recaptchaVerifier;
+      const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+244${phoneNumber}`;
+      const result = await signInWithPhoneNumber(auth, formattedPhone, verifier);
+      setConfirmationResult(result);
+    } catch (err: any) {
+      console.error(err);
+      if (err.code === 'auth/operation-not-allowed') {
+        setError("O MÉTODO DE ACESSO POR TELEFONE NÃO ESTÁ ACTIVADO NO CONSOLA DO FIREBASE.");
+      } else {
+        setError("ERRO AO ENVIAR SMS. VERIFIQUE O NÚMERO.");
+      }
+      if ((window as any).recaptchaVerifier) {
+        (window as any).recaptchaVerifier.clear();
+        (window as any).recaptchaVerifier = null;
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const verifyCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    try {
+      if (confirmationResult) {
+        await confirmationResult.confirm(verificationCode);
+      }
+    } catch (err: any) {
+      setError("CÓDIGO DE VERIFICAÇÃO INVÁLIDO.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    try {
+      if (isRegistering) {
+        await createUserWithEmailAndPassword(auth, email, password);
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+      }
+    } catch (err: any) {
+      console.error(err);
+      if (err.code === 'auth/operation-not-allowed') {
+        setError("O MÉTODO DE ACESSO (EMAIL OU TELEFONE) AINDA NÃO ESTÁ ACTIVADO NO CONSOLA DO FIREBASE. POR FAVOR, CONTACTE O ADMINISTRADOR.");
+      } else if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        setError("EMAIL OU PALAVRA-PASSE INCORRECTOS.");
+      } else if (err.code === 'auth/email-already-in-use') {
+        setError("ESTE EMAIL JÁ ESTÁ REGISTADO.");
+      } else if (err.code === 'auth/weak-password') {
+        setError("A PALAVRA-PASSE DEVE TER PELO MENOS 6 CARACTERES.");
+      } else {
+        setError("ERRO NA AUTENTICAÇÃO. TENTE NOVAMENTE.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const logoUrl = "https://i.ibb.co/sdggPPwX/logo.png";
 
   return (
-    <div className="min-h-screen bg-surface flex flex-col items-center justify-center p-6 relative overflow-hidden">
-      {/* Decorative background element */}
-      <div className="absolute top-0 right-0 w-1/3 h-full bg-surface-bright/5 skew-x-12 transform origin-top translate-x-32 invisible lg:visible"></div>
+    <div className="min-h-screen bg-surface flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {/* Background Gallery */}
+      <div className="absolute inset-0 z-0">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentImgIndex}
+            initial={{ opacity: 0, scale: 1.1 }}
+            animate={{ opacity: 0.15, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 2 }}
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${images[currentImgIndex]})` }}
+          />
+        </AnimatePresence>
+        <div className="absolute inset-0 bg-gradient-to-b from-surface via-surface/80 to-surface"></div>
+      </div>
+
+      <div id="recaptcha-container"></div>
       
-      <div className="w-full max-w-sm space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000 relative z-10">
-        <div className="space-y-8 flex flex-col items-center text-center">
-          <div className="w-32 h-32 bg-white/5 border border-outline-variant/10 p-3 flex items-center justify-center overflow-hidden shadow-[0_0_50px_rgba(255,107,0,0.3)] hover:scale-105 transition-all duration-1000">
-            <img 
-              src={logoUrl} 
-              alt="Casa Mãe Logo" 
-              className="w-full h-full object-contain"
-              referrerPolicy="no-referrer"
-              onError={(e) => { e.currentTarget.src = directLogoUrl; }}
-            />
-          </div>
-          <div className="space-y-4">
-            <h1 className="font-headline italic text-7xl text-primary tracking-tight leading-none font-black drop-shadow-2xl">A CASA MÃE</h1>
-            <p className="font-body text-[12px] font-black text-secondary uppercase tracking-[0.6em] italic text-glow">BFV-BEIB FRANCISCO VIANA</p>
-            <div className="w-24 h-1 bg-primary mx-auto mt-6"></div>
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-md space-y-8 relative z-10 bg-surface-container/90 backdrop-blur-xl border border-outline-variant/20 p-8 md:p-12 shadow-3xl"
+      >
+        <div className="space-y-6 flex flex-col items-center text-center">
+          <motion.div 
+            whileHover={{ scale: 1.05 }}
+            className="w-24 h-24 bg-surface-bright/10 border border-outline-variant/10 p-3 flex items-center justify-center overflow-hidden shadow-2xl rounded-sm"
+          >
+            <img src={logoUrl} alt="A Casa Mãe" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+          </motion.div>
+          
+          <div className="space-y-2">
+            <h1 className="font-headline text-5xl md:text-6xl text-primary font-black drop-shadow-2xl">A CASA MÃE</h1>
+            <p className="font-body text-[10px] font-black text-secondary uppercase tracking-[0.6em] text-glow">BFV-BEIB FRANCISCO VIANA</p>
           </div>
         </div>
-
-        <div className="space-y-12">
-          <div className="space-y-4 text-center">
-            <h2 className="font-headline italic text-4xl text-on-surface tracking-tight border-b border-outline-variant/10 pb-6">Identificação</h2>
-            <p className="font-body text-[10px] font-black text-primary/40 uppercase tracking-[0.4em] italic">Operações BFV • Protocolo de Segurança</p>
-          </div>
 
           <div className="space-y-6">
-            <button 
-              onClick={handleLogin}
-              disabled={isLoading}
-              className="w-full group relative flex items-center justify-between h-20 bg-on-surface text-surface px-8 hover:bg-primary transition-all duration-500 disabled:opacity-50"
-            >
-              <div className="flex items-center gap-4">
-                {isLoading ? (
-                  <div className="w-4 h-4 border-2 border-surface border-t-transparent rounded-full animate-spin"></div>
+            <div className="space-y-2 text-center">
+              <h2 className="font-headline text-2xl text-on-surface uppercase tracking-tight">Portal de Acesso</h2>
+              <div className="w-12 h-0.5 bg-primary mx-auto"></div>
+            </div>
+
+          <AnimatePresence mode="wait">
+            {authMode === 'selection' ? (
+              <motion.div 
+                key="selection"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                className="space-y-4"
+              >
+                <button 
+                  onClick={handleGoogleLogin}
+                  disabled={isLoading}
+                  className="w-full group relative flex items-center justify-between h-16 bg-surface-bright/20 border border-outline-variant/10 px-6 hover:bg-primary/20 transition-all duration-500 disabled:opacity-50"
+                >
+                  <div className="flex items-center gap-4">
+                    {isLoading ? (
+                      <div className="w-4 h-4 border-2 border-on-surface border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4 invert" referrerPolicy="no-referrer" />
+                    )}
+                    <span className="font-body font-black uppercase text-[9px] tracking-widest text-on-surface group-hover:text-primary transition-colors">Google Dashboard</span>
+                  </div>
+                  <ShieldCheck size={16} className="text-on-surface/40 group-hover:text-primary transition-colors" />
+                </button>
+
+                <button 
+                  onClick={() => setAuthMode('phone')}
+                  className="w-full group relative flex items-center justify-between h-16 bg-primary/10 border border-primary/20 px-6 hover:bg-primary transition-all duration-500 text-primary hover:text-on-primary"
+                >
+                  <div className="flex items-center gap-4 text-inherit">
+                    <Phone size={16} className="grayscale brightness-150 group-hover:brightness-0 group-hover:grayscale-0" />
+                    <span className="font-body font-black uppercase text-[9px] tracking-widest">Número de Telefone</span>
+                  </div>
+                  <ArrowRight size={16} className="opacity-40 group-hover:opacity-100 transition-all" />
+                </button>
+
+                <button 
+                  onClick={() => {
+                    setAuthMode('email');
+                    setIsRegistering(false);
+                  }}
+                  className="w-full group relative flex items-center justify-between h-16 bg-surface-bright/10 border border-outline-variant/10 px-6 hover:bg-primary/10 transition-all duration-500"
+                >
+                  <div className="flex items-center gap-4">
+                    <Mail size={16} className="text-on-surface/40 group-hover:text-primary transition-colors" />
+                    <span className="font-body font-black uppercase text-[9px] tracking-widest text-on-surface group-hover:text-primary transition-colors">Email e Password</span>
+                  </div>
+                  <ArrowRight size={16} className="text-on-surface/40 group-hover:text-primary transition-colors" />
+                </button>
+              </motion.div>
+            ) : authMode === 'phone' ? (
+              <motion.div 
+                key="phone"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-4"
+              >
+                {!confirmationResult ? (
+                  <form onSubmit={handlePhoneAuth} className="space-y-6">
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <label className="text-xs font-black uppercase tracking-widest text-primary ml-1">Número (Angola +244)</label>
+                        <input 
+                          type="tel" 
+                          placeholder="EX: 923 000 000"
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(e.target.value)}
+                          className="w-full bg-surface-bright border-2 border-outline-variant/80 h-16 px-6 font-mono text-base focus:border-primary outline-none transition-colors text-white placeholder:text-white/40 shadow-inner"
+                          required
+                        />
+                      </div>
+                      <div className="flex gap-4">
+                         <button 
+                          type="button"
+                          onClick={() => setAuthMode('selection')}
+                          className="flex-1 h-14 bg-surface-bright border border-outline-variant/20 text-on-surface text-xs font-black uppercase tracking-widest hover:bg-surface transition-colors"
+                        >
+                          Voltar
+                        </button>
+                        <button 
+                          type="submit"
+                          disabled={isLoading}
+                          className="flex-[2] h-14 bg-primary text-on-primary text-xs font-black uppercase tracking-widest hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
+                        >
+                          {isLoading ? "Enviando..." : "Enviar Código"}
+                        </button>
+                      </div>
+                    </div>
+                  </form>
                 ) : (
-                  <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4 grayscale invert" referrerPolicy="no-referrer" />
+                  <form onSubmit={verifyCode} className="space-y-6">
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <label className="text-xs font-black uppercase tracking-widest text-primary ml-1">Código de verificação</label>
+                        <input 
+                          type="text" 
+                          placeholder="000000"
+                          value={verificationCode}
+                          onChange={(e) => setVerificationCode(e.target.value)}
+                          className="w-full bg-surface-bright border-2 border-outline-variant/80 h-16 px-6 font-mono text-center tracking-[1em] text-2xl focus:border-primary outline-none transition-colors text-white placeholder:text-white/40 shadow-inner"
+                          maxLength={6}
+                          required
+                        />
+                      </div>
+                      <div className="flex gap-4">
+                        <button 
+                          type="button"
+                          onClick={() => setConfirmationResult(null)}
+                          className="flex-1 h-14 bg-surface-bright border border-outline-variant/20 text-on-surface text-xs font-black uppercase tracking-widest hover:bg-surface transition-colors"
+                        >
+                          Anular
+                        </button>
+                        <button 
+                          type="submit"
+                          disabled={isLoading}
+                          className="flex-[2] h-14 bg-primary text-on-primary text-xs font-black uppercase tracking-widest hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
+                        >
+                          {isLoading ? "Verificando..." : "Confirmar Acesso"}
+                        </button>
+                      </div>
+                    </div>
+                  </form>
                 )}
-                <span className="font-body font-black uppercase text-[10px] tracking-[0.2em] italic">Access with Google</span>
-              </div>
-              <ShieldCheck size={18} className="text-surface/20 group-hover:text-surface transition-colors" />
-            </button>
+              </motion.div>
+            ) : (
+              <motion.div 
+                key="email"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-4"
+              >
+                <form onSubmit={handleEmailAuth} className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-black uppercase tracking-[0.3em] text-on-surface-variant/40 ml-1">Endereço de E-mail</label>
+                      <div className="relative">
+                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/20" size={16} />
+                        <input 
+                          type="email" 
+                          placeholder="admin@casamae.ao"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="w-full bg-surface-bright border border-outline-variant/20 h-14 pl-12 pr-6 text-sm focus:border-primary outline-none transition-colors text-white placeholder:text-white/10"
+                          required
+                        />
+                      </div>
+                    </div>
 
-            {error && (
-              <div className="p-4 bg-primary/5 border border-primary/20 flex items-center gap-4 animate-in slide-in-from-top-2">
-                <AlertCircle className="text-primary shrink-0" size={16} />
-                <p className="font-body text-[9px] text-primary font-black uppercase tracking-widest leading-relaxed italic">
-                  {error}
-                </p>
-              </div>
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-black uppercase tracking-[0.3em] text-on-surface-variant/40 ml-1">Palavra-Passe</label>
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/20" size={16} />
+                        <input 
+                          type="password" 
+                          placeholder="••••••••"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="w-full bg-surface-bright border border-outline-variant/20 h-14 pl-12 pr-6 text-sm focus:border-primary outline-none transition-colors text-white placeholder:text-white/10"
+                          required
+                        />
+                      </div>
+                    </div>
+                    
+                    <button 
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full h-14 bg-primary text-on-primary text-xs font-black uppercase tracking-widest hover:bg-primary-hover transition-all duration-300 shadow-xl shadow-primary/20 disabled:opacity-50"
+                    >
+                      {isLoading ? "Processando..." : (isRegistering ? "Criar Minha Conta" : "Entrar no Sistema")}
+                    </button>
+
+                    <div className="flex flex-col gap-4 mt-6">
+                       <button 
+                        type="button"
+                        onClick={() => setIsRegistering(!isRegistering)}
+                        className="text-[10px] font-black uppercase tracking-widest text-secondary hover:text-primary transition-colors"
+                      >
+                        {isRegistering ? "Já tenho conta? Entrar" : "Não tenho conta? Registar agora"}
+                      </button>
+
+                      <button 
+                        type="button"
+                        onClick={() => setAuthMode('selection')}
+                        className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant/40 hover:text-on-surface transition-colors flex items-center justify-center gap-2"
+                      >
+                        <X size={12} /> Cancelar Acesso
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </motion.div>
             )}
-          </div>
+          </AnimatePresence>
 
-          <div className="space-y-8 pt-8 border-t border-outline-variant/10">
-             <p className="font-body text-[10px] text-on-surface-variant/40 leading-loose uppercase tracking-[0.3em] italic text-center">
-               O acesso é estritamente limitado ao pessoal autorizado no ecossistema <span className="text-primary font-black">Casa Mãe</span>.
-             </p>
-          </div>
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="p-4 bg-error/10 border border-error/20 flex items-center gap-4"
+            >
+              <AlertCircle className="text-error shrink-0" size={16} />
+              <p className="font-body text-[9px] text-error font-black uppercase tracking-widest leading-relaxed italic">
+                {error}
+              </p>
+            </motion.div>
+          )}
+
+          <p className="font-body text-[8px] text-on-surface-variant/60 leading-loose uppercase tracking-[0.2em] text-center pt-4">
+            Sistema Seguro BFV. Todos os acessos são monitorizados.<br/>
+            Angola • Cabinda
+          </p>
         </div>
-
-        <footer className="pt-12 flex items-center justify-between opacity-20">
-          <p className="font-body text-[7px] font-bold uppercase tracking-[0.3em] italic">Centro de Comando Casa Mãe</p>
-          <div className="w-8 h-px bg-on-surface"></div>
-        </footer>
-      </div>
+      </motion.div>
       
-      <div className="absolute bottom-8 left-8 flex flex-col gap-2 opacity-5">
-        <span className="font-body text-[60px] font-black italic transform -rotate-90 origin-bottom-left leading-none uppercase select-none pointer-events-none">Casa Mãe</span>
+      <div className="absolute bottom-4 left-4 md:bottom-8 md:left-8 flex flex-col gap-2 opacity-5 hidden sm:flex">
+        <span className="font-body text-[40px] md:text-[60px] font-black italic transform -rotate-90 origin-bottom-left leading-none uppercase select-none pointer-events-none">A Casa Mãe</span>
       </div>
     </div>
   );
