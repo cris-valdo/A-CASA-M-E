@@ -1,0 +1,118 @@
+{
+  "entities": {
+    "Guest": {
+      "title": "Guest",
+      "description": "Guest information for the guesthouse",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Full name" },
+        "nif": { "type": "string", "description": "Tax ID" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "nif"]
+    },
+    "Room": {
+      "title": "Room",
+      "description": "Guesthouse room information",
+      "type": "object",
+      "properties": {
+        "number": { "type": "string" },
+        "type": { "type": "string", "enum": ["single", "double", "suite"] },
+        "pricePerNight": { "type": "number" },
+        "status": { "type": "string", "enum": ["available", "occupied", "maintenance"] }
+      },
+      "required": ["number", "type", "pricePerNight", "status"]
+    },
+    "Invoice": {
+      "title": "Invoice",
+      "description": "Billing invoice for a stay",
+      "type": "object",
+      "properties": {
+        "invoiceNumber": { "type": "string" },
+        "guestId": { "type": "string" },
+        "roomId": { "type": "string" },
+        "checkIn": { "type": "string", "format": "date-time" },
+        "checkOut": { "type": "string", "format": "date-time" },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["paid", "pending", "cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "items": {
+          "type": "array",
+          "items": { "type": "object" }
+        }
+      },
+      "required": ["invoiceNumber", "guestId", "totalAmount", "status"]
+    },
+    "User": {
+      "title": "User",
+      "description": "Application user profile and role",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "staff"] },
+        "status": { "type": "string", "enum": ["active", "blocked"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "role", "status"]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "Social feed post for BFV Mural",
+      "type": "object",
+      "properties": {
+        "content": { "type": "string" },
+        "mediaUrl": { "type": "string" },
+        "mediaType": { "type": "string", "enum": ["image", "video"] },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorPhoto": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "likes": { "type": "number" }
+      },
+      "required": ["authorId", "createdAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "System notification for users",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["info", "success", "warning", "error"] },
+        "userId": { "type": "string", "description": "Target user or 'all'" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "message", "userId", "read", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/guests/{guestId}": {
+      "schema": "Guest",
+      "description": "Collection of guests"
+    },
+    "/rooms/{roomId}": {
+      "schema": "Room",
+      "description": "Collection of rooms"
+    },
+    "/invoices/{invoiceId}": {
+      "schema": "Invoice",
+      "description": "Collection of invoices"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "App users and roles"
+    },
+    "/posts/{postId}": {
+      "schema": "Post",
+      "description": "Social feed entries"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User notifications"
+    }
+  }
+}

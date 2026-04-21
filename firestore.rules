@@ -1,0 +1,115 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Validation Blueprints ---
+
+    function isValidGuest(data) {
+      return data.keys().hasAll(['name', 'nif']) 
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 256
+        && data.nif is string && data.nif.size() > 0 && data.nif.size() <= 32
+        && (!('email' in data) || (data.email is string && data.email.size() <= 256))
+        && (!('phone' in data) || (data.phone is string && data.phone.size() <= 32));
+    }
+
+    function isValidRoom(data) {
+      return data.keys().hasAll(['number', 'type', 'pricePerNight', 'status'])
+        && data.number is string && data.number.size() > 0 && data.number.size() <= 16
+        && data.type in ['single', 'double', 'suite']
+        && data.pricePerNight is number && data.pricePerNight >= 0
+        && data.status in ['available', 'occupied', 'maintenance'];
+    }
+
+    function isValidInvoice(data) {
+      return data.keys().hasAll(['invoiceNumber', 'guestId', 'totalAmount', 'status'])
+        && data.invoiceNumber is string && data.invoiceNumber.size() > 0
+        && isValidId(data.guestId)
+        && data.totalAmount is number && data.totalAmount >= 0
+        && data.status in ['paid', 'pending', 'cancelled']
+        && (!('items' in data) || (data.items is list && data.items.size() <= 50));
+    }
+
+    // --- Collection Rules ---
+
+    // Guests
+    match /guests/{guestId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(guestId) && isValidGuest(incoming());
+      allow update: if isSignedIn() && isValidGuest(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'nif', 'email', 'phone'])
+      );
+      allow delete: if isSignedIn(); // Restricted in production
+    }
+
+    // Rooms
+    match /rooms/{roomId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(roomId) && isValidRoom(incoming());
+      allow update: if isSignedIn() && isValidRoom(incoming());
+      allow delete: if isSignedIn();
+    }
+
+    // Invoices
+    match /invoices/{invoiceId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(invoiceId) && isValidInvoice(incoming())
+                    && exists(/databases/$(database)/documents/guests/$(incoming().guestId));
+      allow update: if isSignedIn() && isValidInvoice(incoming()) && (
+        // Prevent changing immutable fields
+        incoming().guestId == existing().guestId &&
+        incoming().invoiceNumber == existing().invoiceNumber &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'totalAmount', 'items', 'checkOut'])
+      );
+      allow delete: if isSignedIn();
+    }
+
+    // Users
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && request.auth.uid == userId;
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Posts
+    match /posts/{postId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && incoming().authorId == request.auth.uid;
+      allow update: if isSignedIn() && existing().authorId == request.auth.uid;
+      allow delete: if isSignedIn() && existing().authorId == request.auth.uid;
+    }
+
+    // Notifications
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.userId == 'all');
+      allow update: if isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.userId == 'all');
+      allow create: if isSignedIn();
+      allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.userId == 'all');
+    }
+  }
+}

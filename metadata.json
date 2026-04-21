@@ -1,0 +1,6 @@
+{
+  "name": "A CASA MÃE",
+  "description": "Sistema avançado de facturação e relatórios para a Hospedaria, Restaurante e Bar BFV – Beib Francisco Viana.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["Firebase", "Data Visualization"]
+}
