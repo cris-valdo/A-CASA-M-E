@@ -104,11 +104,19 @@ const AuthScreen: React.FC = () => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+
+    // Transform phone-only input to internal email format for Firebase Email/Password provider
+    let finalId = email.trim();
+    if (!finalId.includes('@')) {
+      // It's likely a phone number
+      finalId = `${finalId.replace(/\s/g, '').replace('+', '')}@casamae.ao`;
+    }
+
     try {
       if (isRegistering) {
-        await createUserWithEmailAndPassword(auth, email, password);
+        await createUserWithEmailAndPassword(auth, finalId, password);
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        await signInWithEmailAndPassword(auth, finalId, password);
       }
     } catch (err: any) {
       console.error(err);
@@ -171,7 +179,7 @@ const AuthScreen: React.FC = () => {
 
           <div className="space-y-6">
             <div className="space-y-2 text-center">
-              <h2 className="font-headline text-2xl text-on-surface uppercase tracking-tight">Portal de Acesso</h2>
+              <h2 className="font-headline text-2xl text-on-surface font-bold uppercase tracking-tight">Portal de Acesso</h2>
               <div className="w-12 h-0.5 bg-primary mx-auto"></div>
             </div>
 
@@ -185,45 +193,49 @@ const AuthScreen: React.FC = () => {
                 className="space-y-4"
               >
                 <button 
-                  onClick={handleGoogleLogin}
-                  disabled={isLoading}
-                  className="w-full group relative flex items-center justify-between h-16 bg-surface-bright/20 border border-outline-variant/10 px-6 hover:bg-primary/20 transition-all duration-500 disabled:opacity-50"
-                >
-                  <div className="flex items-center gap-4">
-                    {isLoading ? (
-                      <div className="w-4 h-4 border-2 border-on-surface border-t-transparent rounded-full animate-spin"></div>
-                    ) : (
-                      <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4 invert" referrerPolicy="no-referrer" />
-                    )}
-                    <span className="font-body font-black uppercase text-[9px] tracking-widest text-on-surface group-hover:text-primary transition-colors">Google Dashboard</span>
-                  </div>
-                  <ShieldCheck size={16} className="text-on-surface/40 group-hover:text-primary transition-colors" />
-                </button>
-
-                <button 
-                  onClick={() => setAuthMode('phone')}
-                  className="w-full group relative flex items-center justify-between h-16 bg-primary/10 border border-primary/20 px-6 hover:bg-primary transition-all duration-500 text-primary hover:text-on-primary"
-                >
-                  <div className="flex items-center gap-4 text-inherit">
-                    <Phone size={16} className="grayscale brightness-150 group-hover:brightness-0 group-hover:grayscale-0" />
-                    <span className="font-body font-black uppercase text-[9px] tracking-widest">Número de Telefone</span>
-                  </div>
-                  <ArrowRight size={16} className="opacity-40 group-hover:opacity-100 transition-all" />
-                </button>
-
-                <button 
                   onClick={() => {
                     setAuthMode('email');
-                    setIsRegistering(false);
+                    setIsRegistering(true);
                   }}
-                  className="w-full group relative flex items-center justify-between h-16 bg-surface-bright/10 border border-outline-variant/10 px-6 hover:bg-primary/10 transition-all duration-500"
+                  className="w-full group relative flex items-center justify-between h-20 bg-primary text-on-primary px-8 hover:brightness-110 transition-all duration-300 shadow-xl shadow-primary/20"
                 >
                   <div className="flex items-center gap-4">
-                    <Mail size={16} className="text-on-surface/40 group-hover:text-primary transition-colors" />
-                    <span className="font-body font-black uppercase text-[9px] tracking-widest text-on-surface group-hover:text-primary transition-colors">Email e Password</span>
+                    <ShieldCheck size={20} className="" />
+                    <div className="text-left">
+                      <span className="block font-headline font-black uppercase text-[11px] tracking-widest italic">Criar Nova Conta</span>
+                      <span className="block font-body text-[8px] uppercase tracking-widest opacity-60">Registar Email ou Telefone</span>
+                    </div>
                   </div>
-                  <ArrowRight size={16} className="text-on-surface/40 group-hover:text-primary transition-colors" />
+                  <ArrowRight size={18} className="opacity-40" />
                 </button>
+
+                <div className="flex items-center gap-4 py-2">
+                  <div className="h-px flex-1 bg-outline-variant/20"></div>
+                  <span className="font-body text-[8px] uppercase tracking-[0.4em] text-on-surface/40 italic">Ou Entrar com</span>
+                  <div className="h-px flex-1 bg-outline-variant/20"></div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <button 
+                    onClick={handleGoogleLogin}
+                    disabled={isLoading}
+                    className="group relative flex flex-col items-center justify-center gap-2 h-20 bg-surface-bright/40 border border-outline-variant/20 hover:bg-primary/20 transition-all duration-300 disabled:opacity-50"
+                  >
+                    <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4 invert" referrerPolicy="no-referrer" />
+                    <span className="font-body font-black uppercase text-[7px] tracking-[0.2em] text-on-surface">Google</span>
+                  </button>
+
+                  <button 
+                    onClick={() => {
+                      setAuthMode('email');
+                      setIsRegistering(false);
+                    }}
+                    className="group relative flex flex-col items-center justify-center gap-2 h-20 bg-surface-bright/40 border border-outline-variant/20 hover:bg-primary/20 transition-all duration-300"
+                  >
+                    <Lock size={16} className="text-on-surface/70 group-hover:text-primary transition-colors" />
+                    <span className="font-body font-black uppercase text-[7px] tracking-[0.2em] text-on-surface">Login</span>
+                  </button>
+                </div>
               </motion.div>
             ) : authMode === 'phone' ? (
               <motion.div 
@@ -243,7 +255,7 @@ const AuthScreen: React.FC = () => {
                           placeholder="EX: 923 000 000"
                           value={phoneNumber}
                           onChange={(e) => setPhoneNumber(e.target.value)}
-                          className="w-full bg-surface-bright border-2 border-outline-variant/80 h-16 px-6 font-mono text-base focus:border-primary outline-none transition-colors text-white placeholder:text-white/40 shadow-inner"
+                          className="w-full bg-surface-bright border-2 border-outline-variant/60 h-16 px-6 font-mono text-base focus:border-primary outline-none transition-colors text-white placeholder:text-white/30 shadow-inner"
                           required
                         />
                       </div>
@@ -275,7 +287,7 @@ const AuthScreen: React.FC = () => {
                           placeholder="000000"
                           value={verificationCode}
                           onChange={(e) => setVerificationCode(e.target.value)}
-                          className="w-full bg-surface-bright border-2 border-outline-variant/80 h-16 px-6 font-mono text-center tracking-[1em] text-2xl focus:border-primary outline-none transition-colors text-white placeholder:text-white/40 shadow-inner"
+                          className="w-full bg-surface-bright border-2 border-outline-variant/60 h-16 px-6 font-mono text-center tracking-[1em] text-2xl focus:border-primary outline-none transition-colors text-white placeholder:text-white/30 shadow-inner"
                           maxLength={6}
                           required
                         />
@@ -311,34 +323,34 @@ const AuthScreen: React.FC = () => {
                 <form onSubmit={handleEmailAuth} className="space-y-6">
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black uppercase tracking-[0.3em] text-on-surface-variant/40 ml-1">Endereço de E-mail</label>
-                      <div className="relative">
-                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/20" size={16} />
-                        <input 
-                          type="email" 
-                          placeholder="admin@casamae.ao"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          className="w-full bg-surface-bright border border-outline-variant/20 h-14 pl-12 pr-6 text-sm focus:border-primary outline-none transition-colors text-white placeholder:text-white/10"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[9px] font-black uppercase tracking-[0.3em] text-on-surface-variant/40 ml-1">Palavra-Passe</label>
-                      <div className="relative">
-                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/20" size={16} />
-                        <input 
-                          type="password" 
-                          placeholder="••••••••"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          className="w-full bg-surface-bright border border-outline-variant/20 h-14 pl-12 pr-6 text-sm focus:border-primary outline-none transition-colors text-white placeholder:text-white/10"
-                          required
-                        />
-                      </div>
-                    </div>
+                       <label className="text-[10px] font-black uppercase tracking-[0.3em] text-on-surface ml-1 italic">{isRegistering ? "Defina ID (Email ou Telemóvel)" : "Identificação (Email ou Telemóvel)"}</label>
+                       <div className="relative">
+                         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface/60" size={16} />
+                         <input 
+                           type="text" 
+                           placeholder={isRegistering ? "Ex: 923... ou email@ex.com" : "Digite seu ID"}
+                           value={email}
+                           onChange={(e) => setEmail(e.target.value)}
+                           className="w-full bg-surface-bright border border-outline-variant/60 h-16 pl-12 pr-6 text-sm focus:border-primary outline-none transition-colors text-white placeholder:text-white/30"
+                           required
+                         />
+                       </div>
+                     </div>
+ 
+                     <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-[0.3em] text-on-surface ml-1 italic">{isRegistering ? "Crie uma Palavra-Passe" : "Sua Palavra-Passe"}</label>
+                       <div className="relative">
+                         <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface/60" size={16} />
+                         <input 
+                           type="password" 
+                           placeholder="••••••••"
+                           value={password}
+                           onChange={(e) => setPassword(e.target.value)}
+                           className="w-full bg-surface-bright border border-outline-variant/60 h-16 pl-12 pr-6 text-sm focus:border-primary outline-none transition-colors text-white placeholder:text-white/30"
+                           required
+                         />
+                       </div>
+                     </div>
                     
                     <button 
                       type="submit"
