@@ -108,8 +108,8 @@ const AuthScreen: React.FC = () => {
     // Transform phone-only input to internal email format for Firebase Email/Password provider
     let finalId = email.trim();
     if (!finalId.includes('@')) {
-      // It's likely a phone number
-      finalId = `${finalId.replace(/\s/g, '').replace('+', '')}@casamae.ao`;
+      const cleanId = finalId.replace(/\s/g, '').replace('+', '');
+      finalId = `${cleanId}@bfv.ao`;
     }
 
     try {
@@ -119,17 +119,19 @@ const AuthScreen: React.FC = () => {
         await signInWithEmailAndPassword(auth, finalId, password);
       }
     } catch (err: any) {
-      console.error(err);
+      console.error("DIAGNOSTICO BFV:", err.code, err.message);
       if (err.code === 'auth/operation-not-allowed') {
-        setError("O MÉTODO DE ACESSO (EMAIL OU TELEFONE) AINDA NÃO ESTÁ ACTIVADO NO CONSOLA DO FIREBASE. POR FAVOR, CONTACTE O ADMINISTRADOR.");
+        setError("ADMINISTRADOR: ACTIVAR 'EMAIL/PASSWORD' NA CONSOLA DO FIREBASE.");
       } else if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-        setError("EMAIL OU PALAVRA-PASSE INCORRECTOS.");
+        setError("ACESSO NEGADO: ID OU PALAVRA-PASSE INCORRECTOS.");
       } else if (err.code === 'auth/email-already-in-use') {
-        setError("ESTE EMAIL JÁ ESTÁ REGISTADO.");
+        setError("ALERTA: ESTE ID JÁ EXISTE. FAÇA 'LOGIN' EM VEZ DE REGISTAR.");
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setError("DOMÍNIO NÃO AUTORIZADO: ADICIONE O URL DO VERCEL NAS CONFIGURAÇÕES DO FIREBASE.");
       } else if (err.code === 'auth/weak-password') {
-        setError("A PALAVRA-PASSE DEVE TER PELO MENOS 6 CARACTERES.");
+        setError("SEGURANÇA: PALAVRA-PASSE MUITO CURTA (MÍNIMO 6).");
       } else {
-        setError("ERRO NA AUTENTICAÇÃO. TENTE NOVAMENTE.");
+        setError(`ERRO DO SISTEMA (${err.code}): ${err.message.toUpperCase()}`);
       }
     } finally {
       setIsLoading(false);
@@ -161,26 +163,22 @@ const AuthScreen: React.FC = () => {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md space-y-8 relative z-10 bg-surface-container/90 backdrop-blur-xl border border-outline-variant/20 p-8 md:p-12 shadow-3xl"
+        className="w-full max-w-md space-y-8 relative z-10 bg-black border-4 border-primary p-8 md:p-12 shadow-[0_0_60px_rgba(255,107,0,0.3)]"
       >
         <div className="space-y-6 flex flex-col items-center text-center">
-          <motion.div 
-            whileHover={{ scale: 1.05 }}
-            className="w-24 h-24 bg-surface-bright/10 border border-outline-variant/10 p-3 flex items-center justify-center overflow-hidden shadow-2xl rounded-sm"
-          >
+          <div className="w-24 h-24 bg-white border border-outline-variant/10 p-3 flex items-center justify-center overflow-hidden shadow-2xl rounded-sm">
             <img src={logoUrl} alt="A Casa Mãe" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
-          </motion.div>
+          </div>
           
           <div className="space-y-2">
-            <h1 className="font-headline text-5xl md:text-6xl text-primary font-black drop-shadow-2xl">A CASA MÃE</h1>
-            <p className="font-body text-[10px] font-black text-secondary uppercase tracking-[0.6em] text-glow">BFV-BEIB FRANCISCO VIANA</p>
+            <h1 className="font-headline text-5xl md:text-6xl text-primary font-black">A CASA MÃE</h1>
+            <p className="font-body text-xs font-black text-secondary uppercase tracking-[0.4em]">BFV - FRANCISCO VIANA</p>
           </div>
         </div>
 
           <div className="space-y-6">
-            <div className="space-y-2 text-center">
-              <h2 className="font-headline text-2xl text-on-surface font-bold uppercase tracking-tight">Portal de Acesso</h2>
-              <div className="w-12 h-0.5 bg-primary mx-auto"></div>
+            <div className="space-y-2 text-center border-b border-primary/20 pb-4">
+              <h2 className="font-headline text-2xl text-white font-bold uppercase tracking-tight">Portal de Acesso</h2>
             </div>
 
           <AnimatePresence mode="wait">
@@ -197,43 +195,39 @@ const AuthScreen: React.FC = () => {
                     setAuthMode('email');
                     setIsRegistering(true);
                   }}
-                  className="w-full group relative flex items-center justify-between h-20 bg-primary text-on-primary px-8 hover:brightness-110 transition-all duration-300 shadow-xl shadow-primary/20"
+                  className="w-full flex flex-col items-center justify-center h-24 bg-primary text-white hover:bg-primary-hover transition-all duration-300 shadow-xl border-2 border-primary"
                 >
-                  <div className="flex items-center gap-4">
-                    <ShieldCheck size={20} className="" />
-                    <div className="text-left">
-                      <span className="block font-headline font-black uppercase text-[11px] tracking-widest italic">Criar Nova Conta</span>
-                      <span className="block font-body text-[8px] uppercase tracking-widest opacity-60">Registar Email ou Telefone</span>
-                    </div>
+                  <div className="text-center">
+                    <span className="block font-headline font-black uppercase text-xl italic leading-none">1. CRIAR NOVA CONTA</span>
+                    <span className="block font-body text-[10px] uppercase tracking-widest font-bold mt-2">Clique aqui para se registar</span>
                   </div>
-                  <ArrowRight size={18} className="opacity-40" />
                 </button>
 
                 <div className="flex items-center gap-4 py-2">
-                  <div className="h-px flex-1 bg-outline-variant/20"></div>
-                  <span className="font-body text-[8px] uppercase tracking-[0.4em] text-on-surface/40 italic">Ou Entrar com</span>
-                  <div className="h-px flex-1 bg-outline-variant/20"></div>
+                  <div className="h-px flex-1 bg-primary/30"></div>
+                  <span className="font-body text-[10px] uppercase font-black text-white italic tracking-[0.2em]">OU ENTRAR</span>
+                  <div className="h-px flex-1 bg-primary/30"></div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <button 
-                    onClick={handleGoogleLogin}
-                    disabled={isLoading}
-                    className="group relative flex flex-col items-center justify-center gap-2 h-20 bg-surface-bright/40 border border-outline-variant/20 hover:bg-primary/20 transition-all duration-300 disabled:opacity-50"
-                  >
-                    <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4 invert" referrerPolicy="no-referrer" />
-                    <span className="font-body font-black uppercase text-[7px] tracking-[0.2em] text-on-surface">Google</span>
-                  </button>
-
                   <button 
                     onClick={() => {
                       setAuthMode('email');
                       setIsRegistering(false);
                     }}
-                    className="group relative flex flex-col items-center justify-center gap-2 h-20 bg-surface-bright/40 border border-outline-variant/20 hover:bg-primary/20 transition-all duration-300"
+                    className="flex flex-col items-center justify-center gap-2 h-20 bg-white border-2 border-white text-black hover:bg-gray-200 transition-all duration-300"
                   >
-                    <Lock size={16} className="text-on-surface/70 group-hover:text-primary transition-colors" />
-                    <span className="font-body font-black uppercase text-[7px] tracking-[0.2em] text-on-surface">Login</span>
+                    <Lock size={20} />
+                    <span className="font-body font-black uppercase text-[10px] tracking-widest">LOGIN</span>
+                  </button>
+
+                  <button 
+                    onClick={handleGoogleLogin}
+                    disabled={isLoading}
+                    className="flex flex-col items-center justify-center gap-2 h-20 bg-surface-bright border-2 border-primary text-white hover:bg-primary/20 transition-all duration-300 disabled:opacity-50"
+                  >
+                    <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4 invert" referrerPolicy="no-referrer" />
+                    <span className="font-body font-black uppercase text-[10px] tracking-widest text-on-surface group-hover:text-primary transition-colors">GOOGLE</span>
                   </button>
                 </div>
               </motion.div>
@@ -249,13 +243,13 @@ const AuthScreen: React.FC = () => {
                   <form onSubmit={handlePhoneAuth} className="space-y-6">
                     <div className="space-y-6">
                       <div className="space-y-2">
-                        <label className="text-xs font-black uppercase tracking-widest text-primary ml-1">Número (Angola +244)</label>
+                        <label className="text-xs font-black uppercase tracking-widest text-primary ml-1">Número de Telefone</label>
                         <input 
                           type="tel" 
                           placeholder="EX: 923 000 000"
                           value={phoneNumber}
                           onChange={(e) => setPhoneNumber(e.target.value)}
-                          className="w-full bg-surface-bright border-2 border-outline-variant/60 h-16 px-6 font-mono text-base focus:border-primary outline-none transition-colors text-white placeholder:text-white/30 shadow-inner"
+                          className="w-full bg-surface-bright border-2 border-primary/50 h-16 px-6 font-bold text-lg focus:border-primary outline-none transition-colors text-white placeholder:text-white/20 shadow-inner"
                           required
                         />
                       </div>
@@ -281,13 +275,13 @@ const AuthScreen: React.FC = () => {
                   <form onSubmit={verifyCode} className="space-y-6">
                     <div className="space-y-6">
                       <div className="space-y-2">
-                        <label className="text-xs font-black uppercase tracking-widest text-primary ml-1">Código de verificação</label>
+                        <label className="text-xs font-black uppercase tracking-widest text-primary ml-1">Código SMS Recebido</label>
                         <input 
                           type="text" 
-                          placeholder="000000"
+                          placeholder="000 000"
                           value={verificationCode}
                           onChange={(e) => setVerificationCode(e.target.value)}
-                          className="w-full bg-surface-bright border-2 border-outline-variant/60 h-16 px-6 font-mono text-center tracking-[1em] text-2xl focus:border-primary outline-none transition-colors text-white placeholder:text-white/30 shadow-inner"
+                          className="w-full bg-surface-bright border-2 border-primary/50 h-16 px-6 font-mono text-center tracking-[0.5em] text-2xl font-bold focus:border-primary outline-none transition-colors text-white placeholder:text-white/20 shadow-inner"
                           maxLength={6}
                           required
                         />
@@ -320,33 +314,43 @@ const AuthScreen: React.FC = () => {
                 exit={{ opacity: 0, x: -20 }}
                 className="space-y-4"
               >
+                <div className="text-center space-y-1 mb-6">
+                  <h3 className="font-headline text-xl text-primary font-bold uppercase italic underline decoration-primary/30 underline-offset-8">
+                    {isRegistering ? "Passo 2: Criar Acesso" : "Identificação Requerida"}
+                  </h3>
+                </div>
+
                 <form onSubmit={handleEmailAuth} className="space-y-6">
                   <div className="space-y-4">
                     <div className="space-y-2">
-                       <label className="text-[10px] font-black uppercase tracking-[0.3em] text-on-surface ml-1 italic">{isRegistering ? "Defina ID (Email ou Telemóvel)" : "Identificação (Email ou Telemóvel)"}</label>
+                       <label className="text-[11px] font-black uppercase tracking-[0.2em] text-white ml-1">
+                         {isRegistering ? "Escolha um ID (Email ou Telefone)" : "Seu ID (Email ou Telefone)"}
+                       </label>
                        <div className="relative">
-                         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface/60" size={16} />
+                         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" size={18} />
                          <input 
                            type="text" 
-                           placeholder={isRegistering ? "Ex: 923... ou email@ex.com" : "Digite seu ID"}
+                           placeholder={isRegistering ? "923 000 000 ou email@provedor.com" : "Introduza o seu ID"}
                            value={email}
                            onChange={(e) => setEmail(e.target.value)}
-                           className="w-full bg-surface-bright border border-outline-variant/60 h-16 pl-12 pr-6 text-sm focus:border-primary outline-none transition-colors text-white placeholder:text-white/30"
+                           className="w-full bg-surface-bright border-2 border-primary/50 h-16 pl-14 pr-6 text-base font-bold outline-none focus:border-primary transition-all text-white placeholder:text-white/40"
                            required
                          />
                        </div>
                      </div>
  
                      <div className="space-y-2">
-                       <label className="text-[10px] font-black uppercase tracking-[0.3em] text-on-surface ml-1 italic">{isRegistering ? "Crie uma Palavra-Passe" : "Sua Palavra-Passe"}</label>
+                       <label className="text-[11px] font-black uppercase tracking-[0.2em] text-white ml-1">
+                         {isRegistering ? "Defina uma Palavra-Passe" : "Sua Palavra-Passe"}
+                       </label>
                        <div className="relative">
-                         <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface/60" size={16} />
+                         <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" size={18} />
                          <input 
                            type="password" 
                            placeholder="••••••••"
                            value={password}
                            onChange={(e) => setPassword(e.target.value)}
-                           className="w-full bg-surface-bright border border-outline-variant/60 h-16 pl-12 pr-6 text-sm focus:border-primary outline-none transition-colors text-white placeholder:text-white/30"
+                           className="w-full bg-surface-bright border-2 border-primary/50 h-16 pl-14 pr-6 text-base font-bold outline-none focus:border-primary transition-all text-white placeholder:text-white/40"
                            required
                          />
                        </div>
@@ -355,26 +359,26 @@ const AuthScreen: React.FC = () => {
                     <button 
                       type="submit"
                       disabled={isLoading}
-                      className="w-full h-14 bg-primary text-on-primary text-xs font-black uppercase tracking-widest hover:bg-primary-hover transition-all duration-300 shadow-xl shadow-primary/20 disabled:opacity-50"
+                      className="w-full h-16 bg-primary text-white text-sm font-black uppercase tracking-widest hover:brightness-110 transition-all duration-300 shadow-2xl shadow-primary/30 disabled:opacity-50 border-2 border-primary"
                     >
-                      {isLoading ? "Processando..." : (isRegistering ? "Criar Minha Conta" : "Entrar no Sistema")}
+                      {isLoading ? "A PROCESSAR..." : (isRegistering ? "FINALIZAR REGISTO" : "ENTRAR AGORA")}
                     </button>
 
-                    <div className="flex flex-col gap-4 mt-6">
-                       <button 
+                    <div className="flex flex-col gap-4 mt-8 pt-6 border-t-2 border-primary/20">
+                      <button 
                         type="button"
                         onClick={() => setIsRegistering(!isRegistering)}
-                        className="text-[10px] font-black uppercase tracking-widest text-secondary hover:text-primary transition-colors"
+                        className="bg-white text-black py-4 px-6 font-black uppercase text-[10px] tracking-[0.2em] shadow-xl hover:bg-gray-100 transition-colors"
                       >
-                        {isRegistering ? "Já tenho conta? Entrar" : "Não tenho conta? Registar agora"}
+                        {isRegistering ? "JÁ TENHO CONTA? ENTRAR" : "NÃO TENHO CONTA? REGISTAR"}
                       </button>
 
                       <button 
                         type="button"
                         onClick={() => setAuthMode('selection')}
-                        className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant/40 hover:text-on-surface transition-colors flex items-center justify-center gap-2"
+                        className="bg-black border-2 border-primary/50 text-white py-3 px-6 font-black uppercase text-[10px] tracking-[0.2em] hover:bg-primary/20 transition-colors"
                       >
-                        <X size={12} /> Cancelar Acesso
+                        VOLTAR AO INÍCIO
                       </button>
                     </div>
                   </div>
@@ -385,20 +389,27 @@ const AuthScreen: React.FC = () => {
 
           {error && (
             <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="p-4 bg-error/10 border border-error/20 flex items-center gap-4"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-6 bg-red-600 border-2 border-white text-white shadow-[0_0_30px_rgba(220,38,38,0.5)]"
             >
-              <AlertCircle className="text-error shrink-0" size={16} />
-              <p className="font-body text-[9px] text-error font-black uppercase tracking-widest leading-relaxed italic">
-                {error}
-              </p>
+              <div className="flex items-start gap-4">
+                <AlertCircle className="shrink-0 animate-pulse" size={24} />
+                <div className="space-y-1">
+                  <p className="font-headline font-black uppercase text-xs tracking-widest italic">Erro de Autenticação:</p>
+                  <p className="font-body text-[11px] font-bold leading-tight uppercase">
+                    {error}
+                  </p>
+                </div>
+              </div>
             </motion.div>
           )}
 
-          <p className="font-body text-[8px] text-on-surface-variant/60 leading-loose uppercase tracking-[0.2em] text-center pt-4">
-            Sistema Seguro BFV. Todos os acessos são monitorizados.<br/>
-            Angola • Cabinda
+          <p className="font-body text-[10px] text-white/80 leading-loose uppercase tracking-[0.2em] text-center pt-8 border-t border-primary/20">
+            SISTEMA SEGURO BFV • CABINDA, ANGOLA
+          </p>
+          <p className="text-[8px] text-primary/50 text-center font-bold mt-2 uppercase tracking-widest">
+            Versão de UI: 22.04.2026-V3 (Contraste Máximo)
           </p>
         </div>
       </motion.div>
