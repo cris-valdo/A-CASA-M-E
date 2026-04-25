@@ -6,9 +6,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { onAuthStateChanged, signOut, User } from 'firebase/auth';
-import { auth } from './lib/firebase';
+import { supabase } from './lib/supabase';
 import { cn } from './lib/utils';
+// Use local user state for session tracking
+import { User } from '@supabase/supabase-js';
 import Dashboard from './components/Dashboard';
 import BillingForm from './components/BillingForm';
 import Reports from './components/Reports';
@@ -60,18 +61,19 @@ const AppBackground = () => {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-0 pointer-events-none opacity-[0.03]">
+    <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
       <AnimatePresence mode="wait">
         <motion.div
           key={index}
-          initial={{ opacity: 0, scale: 1.1 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.9 }}
-          transition={{ duration: 4, ease: "easeInOut" }}
+          initial={{ opacity: 0, scale: 1.05 }}
+          animate={{ opacity: 0.15, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 3, ease: "easeInOut" }}
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${bgImages[index]})` }}
         />
       </AnimatePresence>
+      <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-transparent to-black/60"></div>
     </div>
   );
 };
@@ -87,16 +89,41 @@ const App: React.FC = () => {
   const [isNotificationTrayOpen, setIsNotificationTrayOpen] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    // Check for "Bypass" login first
+    const bypassData = localStorage.getItem('bfv_bypass_user');
+    if (bypassData) {
+      try {
+        const bypassUser = JSON.parse(bypassData);
+        setUser(bypassUser);
+        setUserRole('admin');
+        setLoading(false);
+        return; // Skip supabase check if bypass is active
+      } catch (e) {
+        localStorage.removeItem('bfv_bypass_user');
+      }
+    }
+
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        const isAdminEmail = session.user.email === 'valter1990vado@gmail.com' || session.user.email?.startsWith('valter');
+        setUserRole(isAdminEmail ? 'admin' : 'staff');
+      }
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const currentUser = session?.user ?? null;
       setUser(currentUser);
-      // Whitelist for admin - adding a fallback for common test accounts or letting the user match their email
+      
       const isAdminEmail = currentUser?.email === 'valter1990vado@gmail.com' || currentUser?.email?.startsWith('valter');
       
       if (isAdminEmail) {
         setUserRole('admin');
       } else {
         setUserRole('staff');
-        // If staff logs in, default to a page they can access
         if (['reports', 'staff', 'settings'].includes(currentPage)) {
           setCurrentPage('dashboard');
         }
@@ -104,19 +131,22 @@ const App: React.FC = () => {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => subscription.unsubscribe();
   }, [currentPage]);
 
   useEffect(() => {
     if (user) {
-      const unsub = subscribeToNotifications(user.uid, setNotifications);
-      return () => unsub();
+      // Temporarily disabling Firebase notification subscription until fully migrated to Supabase
+      // const unsub = subscribeToNotifications(user.id, setNotifications);
+      // return () => unsub();
     }
   }, [user]);
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      localStorage.removeItem('bfv_bypass_user');
+      await supabase.auth.signOut();
+      window.location.reload(); // Ensure clean state
     } catch (error) {
       console.error("Erro ao sair:", error);
     }
@@ -386,16 +416,16 @@ const App: React.FC = () => {
 
             <div className="flex items-center gap-4 pl-4 border-l border-outline-variant/10">
               <div className="text-right hidden sm:block">
-                <p className="text-xs font-headline tracking-wide leading-none">{user.displayName || 'Manager'}</p>
+                <p className="text-xs font-headline tracking-wide leading-none">{user.user_metadata?.display_name || user.email?.split('@')[0] || 'Manager'}</p>
                 <p className="text-[9px] text-primary font-bold uppercase tracking-widest mt-1 opacity-60">
                    {userRole === 'admin' ? 'Director Executivo' : 'Operações'}
                 </p>
               </div>
               <div className="h-10 w-10 rounded-sm bg-surface-container border border-outline-variant/20 flex items-center justify-center overflow-hidden shrink-0 shadow-lg grayscale hover:grayscale-0 transition-all duration-500">
-                {user.photoURL ? (
-                  <img src={user.photoURL} alt="Profile" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                {user.user_metadata?.avatar_url ? (
+                  <img src={user.user_metadata.avatar_url} alt="Profile" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                 ) : (
-                  <span className="font-headline text-lg text-primary">{user.displayName?.[0] || 'A'}</span>
+                  <span className="font-headline text-lg text-primary">{(user.user_metadata?.display_name?.[0] || user.email?.[0] || 'A').toUpperCase()}</span>
                 )}
               </div>
             </div>
@@ -403,7 +433,7 @@ const App: React.FC = () => {
         </header>
 
         {/* Dynamic Content Canvas */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-10 bg-surface">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-10 relative z-10">
            <div className="max-w-7xl mx-auto pb-12">
                <div className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                  <div>

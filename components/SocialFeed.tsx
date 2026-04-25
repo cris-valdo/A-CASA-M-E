@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { subscribeToPosts, createPost } from '../services/firestoreService';
-import { auth } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 
 const SocialFeed: React.FC = () => {
   const [posts, setPosts] = useState<any[]>([]);
@@ -22,9 +22,11 @@ const SocialFeed: React.FC = () => {
   const [mediaUrl, setMediaUrl] = useState('');
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
   const [isPosting, setIsPosting] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
     const unsub = subscribeToPosts(setPosts);
+    supabase.auth.getUser().then(({ data: { user } }) => setCurrentUser(user));
     return () => unsub();
   }, []);
 
@@ -33,15 +35,14 @@ const SocialFeed: React.FC = () => {
     if (!newPostContent.trim() && !mediaUrl.trim()) return;
 
     setIsPosting(true);
-    const user = auth.currentUser;
     try {
       await createPost({
         content: newPostContent,
         mediaUrl,
         mediaType: mediaUrl ? mediaType : null,
-        authorId: user?.uid,
-        authorName: user?.displayName || 'Equipa Casa Mãe',
-        authorPhoto: user?.photoURL,
+        authorId: currentUser?.id,
+        authorName: currentUser?.user_metadata?.display_name || currentUser?.email?.split('@')[0] || 'Equipa Casa Mãe',
+        authorPhoto: currentUser?.user_metadata?.avatar_url,
         likes: 0
       });
       setNewPostContent('');
@@ -56,15 +57,15 @@ const SocialFeed: React.FC = () => {
   return (
     <div className="max-w-3xl mx-auto space-y-16 pb-32">
       {/* Creation Panel */}
-      <div className="bg-surface-container border border-outline-variant/10 p-10 shadow-2xl relative overflow-hidden group">
+      <div className="bg-surface/40 backdrop-blur-md border border-white/5 p-10 shadow-2xl relative overflow-hidden group rounded-sm">
         <div className="absolute top-0 left-0 w-1 h-full bg-primary/20"></div>
         <div className="relative z-10">
           <div className="flex gap-6 items-start mb-8">
-             <div className="w-14 h-14 bg-surface-bright border border-outline-variant/10 flex items-center justify-center shrink-0 overflow-hidden shadow-xl grayscale">
-                {auth.currentUser?.photoURL ? (
-                  <img src={auth.currentUser.photoURL} alt="" className="w-full h-full object-cover" />
+             <div className="w-14 h-14 bg-white/10 border border-white/10 flex items-center justify-center shrink-0 overflow-hidden shadow-xl grayscale rounded-lg">
+                {currentUser?.user_metadata?.avatar_url ? (
+                  <img src={currentUser.user_metadata.avatar_url} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="font-headline italic text-primary text-2xl">{auth.currentUser?.displayName?.[0] || 'A'}</span>
+                  <span className="font-headline italic text-primary text-2xl">{(currentUser?.user_metadata?.display_name?.[0] || currentUser?.email?.[0] || 'A').toUpperCase()}</span>
                 )}
              </div>
              <div className="flex-1">
@@ -72,23 +73,23 @@ const SocialFeed: React.FC = () => {
                   placeholder="Partilhe uma novidade da Casa Mãe..."
                   value={newPostContent}
                   onChange={(e) => setNewPostContent(e.target.value)}
-                  className="w-full bg-surface-bright/5 border border-outline-variant/10 p-6 text-on-surface font-headline italic text-xl focus:outline-none focus:border-primary/40 transition-all resize-none min-h-[140px] placeholder:text-on-surface-variant/20 tracking-wide"
+                  className="w-full bg-white/5 border border-white/10 p-6 text-on-surface font-headline italic text-xl focus:outline-none focus:border-primary/40 transition-all resize-none min-h-[140px] placeholder:text-white/20 tracking-wide rounded-sm"
                 />
              </div>
           </div>
           
           {mediaUrl && (
-            <div className="mb-8 relative rounded-sm overflow-hidden border border-outline-variant/10 grayscale hover:grayscale-0 transition-all duration-700">
+            <div className="mb-8 relative rounded-sm overflow-hidden border border-white/10 grayscale hover:grayscale-0 transition-all duration-700 shadow-xl">
                {mediaType === 'image' ? (
                  <img src={mediaUrl} alt="Preview" className="w-full max-h-[400px] object-cover" />
                ) : (
-                 <div className="w-full h-[240px] bg-surface-bright flex items-center justify-center">
+                 <div className="w-full h-[240px] bg-white/5 flex items-center justify-center">
                     <Video size={48} className="text-primary/20" />
                  </div>
                )}
                <button 
                  onClick={() => setMediaUrl('')}
-                 className="absolute top-6 right-6 p-2 bg-on-surface/80 text-surface hover:bg-primary transition-colors"
+                 className="absolute top-6 right-6 p-2 bg-on-surface/80 text-surface hover:bg-primary transition-colors rounded-sm"
                >
                  <MoreHorizontal size={16} />
                </button>
@@ -102,7 +103,7 @@ const SocialFeed: React.FC = () => {
                     const url = window.prompt("Image Visual URL:");
                     if (url) { setMediaUrl(url); setMediaType('image'); }
                   }}
-                  className="p-3 text-on-surface-variant/40 hover:text-primary transition-all flex items-center gap-2 font-body text-[9px] uppercase tracking-widest italic"
+                  className="p-3 text-white/40 hover:text-primary transition-all flex items-center gap-2 font-body text-[9px] uppercase tracking-widest italic"
                 >
                    <Camera size={16} />
                    <span>Visual</span>
@@ -112,7 +113,7 @@ const SocialFeed: React.FC = () => {
                     const url = window.prompt("Motion Content URL:");
                     if (url) { setMediaUrl(url); setMediaType('video'); }
                   }}
-                  className="p-3 text-on-surface-variant/40 hover:text-primary transition-all flex items-center gap-2 font-body text-[9px] uppercase tracking-widest italic"
+                  className="p-3 text-white/40 hover:text-primary transition-all flex items-center gap-2 font-body text-[9px] uppercase tracking-widest italic"
                 >
                    <Video size={16} />
                    <span>Motion</span>
@@ -121,7 +122,7 @@ const SocialFeed: React.FC = () => {
              <button 
                onClick={handlePost}
                disabled={isPosting || (!newPostContent.trim() && !mediaUrl.trim())}
-               className="px-10 py-4 bg-on-surface text-surface font-black text-[10px] uppercase tracking-widest hover:bg-primary transition-all italic underline decoration-surface/20 underline-offset-8 disabled:opacity-30 disabled:pointer-events-none"
+               className="px-10 py-4 bg-primary text-white font-black text-[10px] uppercase tracking-widest hover:brightness-110 transition-all italic rounded-sm shadow-xl shadow-primary/20 disabled:opacity-30 disabled:pointer-events-none"
              >
                 {isPosting ? 'A publicar...' : 'Publicar no Mural'}
              </button>
@@ -130,11 +131,11 @@ const SocialFeed: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-6 opacity-30">
-         <div className="h-px flex-1 bg-outline-variant/20"></div>
+         <div className="h-px flex-1 bg-white/10"></div>
          <span className="font-body text-[9px] font-bold uppercase tracking-[0.4em] italic text-on-surface flex items-center gap-4">
             Narrativas Recentes
          </span>
-         <div className="h-px flex-1 bg-outline-variant/20"></div>
+         <div className="h-px flex-1 bg-white/10"></div>
       </div>
 
       {/* Feed */}
@@ -145,21 +146,21 @@ const SocialFeed: React.FC = () => {
           </div>
         ) : (
           posts.map((post) => (
-            <div key={post.id} className="relative group animate-fade-in">
+            <div key={post.id} className="relative group animate-fade-in bg-surface/20 backdrop-blur-sm p-8 border border-white/5 rounded-sm">
                <div className="flex flex-col lg:flex-row gap-12 items-start">
                   <div className="lg:w-1/3 space-y-6">
                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-surface-bright border border-outline-variant/10 flex items-center justify-center overflow-hidden grayscale shrink-0">
+                        <div className="w-10 h-10 bg-white/10 border border-white/10 flex items-center justify-center overflow-hidden grayscale shrink-0 rounded-md">
                            {post.authorPhoto ? (
                              <img src={post.authorPhoto} alt="" className="w-full h-full object-cover" />
                            ) : (
-                             <span className="font-headline italic text-primary text-lg">{post.authorName?.[0]}</span>
+                             <span className="font-headline italic text-primary text-lg">{post.authorName?.[0]?.toUpperCase()}</span>
                            )}
                         </div>
                         <div>
                            <p className="font-headline italic text-lg text-on-surface leading-none">{post.authorName}</p>
-                           <p className="font-body text-[8px] text-on-surface-variant/40 font-bold uppercase mt-1 tracking-widest italic">
-                              {post.createdAt?.toDate ? new Date(post.createdAt.toDate()).toLocaleDateString() : 'Syncing...'}
+                           <p className="font-body text-[8px] text-white/40 font-bold uppercase mt-1 tracking-widest italic">
+                              {post.createdAt?.toDate ? new Date(post.createdAt.toDate()).toLocaleDateString() : 'Activo'}
                            </p>
                         </div>
                      </div>

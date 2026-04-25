@@ -14,8 +14,8 @@ import { formatCurrency, cn } from '../lib/utils';
 import { subscribeToGuests, subscribeToInvoices, subscribeToRooms } from '../services/firestoreService';
 
 const StatCard = ({ title, value, icon: Icon, trend }: any) => (
-  <div className="bg-surface-container-low p-8 border border-outline-variant/10 shadow-lg relative group overflow-hidden">
-    <div className="absolute top-0 left-0 w-1 h-full bg-primary/10 group-hover:bg-primary transition-colors"></div>
+  <div className="bg-surface/40 backdrop-blur-md p-8 border border-white/5 shadow-xl relative group overflow-hidden rounded-sm">
+    <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-hover:bg-primary transition-all duration-500"></div>
     <div className="flex items-start justify-between">
       <div className="space-y-4">
         <p className="font-body text-[10px] uppercase tracking-[0.3em] text-on-surface-variant/40">{title}</p>
@@ -111,8 +111,8 @@ const Dashboard: React.FC<{ userRole?: 'admin' | 'staff' }> = ({ userRole = 'adm
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Service Timeline / Activity */}
         <div className="lg:col-span-2">
-          <div className="bg-surface-container-low border border-outline-variant/10 shadow-xl overflow-hidden h-full">
-            <div className="p-8 border-b border-outline-variant/10 flex justify-between items-center bg-surface-bright/5">
+          <div className="bg-surface/40 backdrop-blur-md border border-white/5 shadow-2xl overflow-hidden h-full rounded-sm">
+            <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/5">
               <div className="flex items-center gap-4">
                 <div className="w-1 h-8 bg-secondary"></div>
                 <div>
@@ -125,23 +125,23 @@ const Dashboard: React.FC<{ userRole?: 'admin' | 'staff' }> = ({ userRole = 'adm
             <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="bg-surface-bright/5">
+                  <tr className="bg-white/5">
                     <th className="px-8 py-5 font-body text-[10px] uppercase tracking-[0.2em] text-on-surface-variant/40">Descrição / Activo</th>
                     <th className="px-8 py-5 font-body text-[10px] uppercase tracking-[0.2em] text-on-surface-variant/40 text-right">Identificador</th>
                     <th className="px-8 py-5 font-body text-[10px] uppercase tracking-[0.2em] text-on-surface-variant/40 text-right">Estado Audit.</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-outline-variant/5">
+                <tbody className="divide-y divide-white/5">
                   {invoices.length === 0 ? (
                     <tr>
                       <td colSpan={3} className="px-8 py-24 text-center">
-                        <p className="font-headline text-on-surface/20 text-2xl">No Activity Recorded</p>
-                        <p className="font-body text-[9px] uppercase tracking-widest text-on-surface-variant/10 mt-2">Awaiting System Input...</p>
+                        <p className="font-headline text-on-surface/20 text-2xl">Sem Atividade Registada</p>
+                        <p className="font-body text-[9px] uppercase tracking-widest text-on-surface-variant/10 mt-2">A aguardar dados do sistema...</p>
                       </td>
                     </tr>
                   ) : (
                     invoices.slice(0, 6).map((inv) => (
-                      <tr key={inv.id} className="hover:bg-primary/5 transition-colors group">
+                      <tr key={inv.id} className="hover:bg-primary/10 transition-colors group">
                         <td className="px-8 py-6">
                            <p className="font-headline text-on-surface text-lg group-hover:text-primary transition-colors">
                               {inv.roomName || 'Serviço Directo'}
@@ -180,7 +180,7 @@ const Dashboard: React.FC<{ userRole?: 'admin' | 'staff' }> = ({ userRole = 'adm
         {/* Inventory / Secondary Controls */}
         <div className="space-y-8">
            {/* Room Inventory Grid View */}
-           <div className="bg-surface-container border border-outline-variant/10 p-8 shadow-xl">
+           <div className="bg-surface/40 backdrop-blur-md border border-white/5 p-8 shadow-xl rounded-sm">
               <h4 className="font-headline italic text-on-surface text-xl mb-8 tracking-wide">Mapa de Quartos</h4>
               <div className="grid grid-cols-4 gap-3">
                  {[...Array(12)].map((_, i) => {
@@ -190,9 +190,9 @@ const Dashboard: React.FC<{ userRole?: 'admin' | 'staff' }> = ({ userRole = 'adm
                         key={i}
                         title={room?.name || `Quarto ${i+1}`}
                         className={cn(
-                          "aspect-square border border-outline-variant/10 flex flex-col items-center justify-center p-2 group cursor-pointer transition-all hover:scale-110",
-                          room?.status === 'occupied' ? "bg-primary/20 border-primary/30" : 
-                          room?.status === 'maintenance' ? "bg-surface-bright border-outline-variant" : "bg-surface-container-low"
+                          "aspect-square border border-white/10 flex flex-col items-center justify-center p-2 group cursor-pointer transition-all hover:scale-110",
+                          room?.status === 'occupied' ? "bg-primary/30 border-primary/40" : 
+                          room?.status === 'maintenance' ? "bg-white/10 border-white/20" : "bg-white/5"
                         )}
                       >
                          <span className={cn(
@@ -213,10 +213,10 @@ const Dashboard: React.FC<{ userRole?: 'admin' | 'staff' }> = ({ userRole = 'adm
            </div>
 
             {/* Quick Operations panel */}
-           <div className="bg-surface-container border border-outline-variant/10 p-8 relative overflow-hidden group shadow-xl">
-              <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-primary/5 rounded-full blur-2xl"></div>
+           <div className="bg-surface/40 backdrop-blur-md border border-white/5 p-8 relative overflow-hidden group shadow-xl rounded-sm">
+              <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-primary/20 rounded-full blur-2xl"></div>
               <div className="relative z-10 flex flex-col items-center text-center">
-                 <div className="w-20 h-20 bg-surface-bright/50 border border-outline-variant/10 p-2 mb-6 flex items-center justify-center overflow-hidden hover:scale-110 transition-transform duration-500 rounded-sm">
+                 <div className="w-20 h-20 bg-white/10 border border-white/20 p-2 mb-6 flex items-center justify-center overflow-hidden hover:scale-110 transition-transform duration-500 rounded-lg">
                     <img 
                       src="https://i.ibb.co/sdggPPwX/logo.png" 
                       alt="Logo" 
