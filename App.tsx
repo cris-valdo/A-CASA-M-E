@@ -65,15 +65,17 @@ const AppBackground = () => {
       <AnimatePresence mode="wait">
         <motion.div
           key={index}
-          initial={{ opacity: 0, scale: 1.05 }}
-          animate={{ opacity: 0.15, scale: 1 }}
+          initial={{ opacity: 0, scale: 1.25 }}
+          animate={{ opacity: 0.25, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          transition={{ duration: 3, ease: "easeInOut" }}
-          className="absolute inset-0 bg-cover bg-center"
+          transition={{ duration: 5, ease: "linear" }}
+          className="absolute inset-0 bg-cover bg-center grayscale brightness-50"
           style={{ backgroundImage: `url(${bgImages[index]})` }}
         />
       </AnimatePresence>
-      <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-transparent to-black/60"></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-black via-transparent to-black/80"></div>
+      {/* Moving lines effect */}
+      <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)', backgroundSize: '100px 100px' }}></div>
     </div>
   );
 };
@@ -182,50 +184,71 @@ const App: React.FC = () => {
   };
 
   const SidebarContent = () => (
-    <div className="h-full flex flex-col bg-surface border-r border-outline-variant/10 shadow-[40px_0_40px_-10px_rgba(0,0,0,0.4)]">
-      <div className="px-6 py-10 mb-6 border-b border-outline-variant/10">
-        <div className="flex flex-col items-center gap-4 mb-4 text-center">
-          <div className="w-20 h-20 bg-surface-bright border border-outline-variant/10 p-2 flex items-center justify-center overflow-hidden shadow-[0_0_30px_rgba(255,107,0,0.2)] hover:scale-105 transition-all duration-700">
-            <img 
-              src="https://i.ibb.co/sdggPPwX/logo.png" 
-              alt="Casa Mãe Logo" 
-              className="w-full h-full object-contain"
-              referrerPolicy="no-referrer"
-            />
+    <div className="h-full flex flex-col bg-surface-container-low/95 backdrop-blur-xl border-r border-white/5 relative overflow-hidden">
+      {/* Decorative vertical lines */}
+      <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/5 to-transparent"></div>
+      
+      <div className="px-6 py-12 mb-6 relative z-10">
+        <div className="flex flex-col items-center gap-5 mb-4 text-center">
+          <div className="relative group">
+            <div className="absolute -inset-2 bg-primary/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+            <div className="w-20 h-20 bg-white p-3 flex items-center justify-center rounded-2xl shadow-2xl relative z-10 transition-transform duration-700 group-hover:rotate-12 group-hover:scale-110">
+              <img 
+                src="https://i.ibb.co/sdggPPwX/logo.png" 
+                alt="Casa Mãe Logo" 
+                className="w-full h-full object-contain"
+                referrerPolicy="no-referrer"
+              />
+            </div>
           </div>
-          <div>
-            <h1 className="font-headline text-primary text-3xl font-black tracking-tight leading-none drop-shadow-sm">A CASA MÃE</h1>
-            <p className="font-body text-[8px] font-black uppercase tracking-[0.4em] text-glow">BFV-BEIB FRANCISCO VIANA</p>
+          <div className="space-y-1">
+            <h1 className="font-headline text-primary text-3xl font-black tracking-tight leading-none drop-shadow-lg">A CASA MÃE</h1>
+            <p className="font-body text-[8px] font-black uppercase tracking-[0.4em] text-secondary/60">BFV • CABINDA</p>
           </div>
         </div>
       </div>
 
-      <nav className="flex-1 px-0 space-y-1 overflow-y-auto custom-scrollbar">
-        {accessibleNavItems.map((item) => (
-          <button
+      <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar relative z-10">
+        {accessibleNavItems.map((item, idx) => (
+          <motion.button
             key={item.id}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: idx * 0.05 }}
             onClick={() => {
               setCurrentPage(item.id);
               setIsMobileMenuOpen(false);
             }}
             className={cn(
-              "w-full flex items-center px-6 py-4 text-xs uppercase tracking-widest transition-all duration-500 relative group",
+              "w-full flex items-center px-6 py-4 text-xs uppercase tracking-[0.2em] transition-all duration-500 rounded-xl group relative overflow-hidden",
               currentPage === item.id 
-                ? "text-primary bg-surface-container-low after:absolute after:right-0 after:top-0 after:h-full after:w-1 after:bg-primary" 
-                : "text-on-surface-variant/40 hover:bg-surface-container-low hover:text-on-surface"
+                ? "text-primary bg-white/[0.03] shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]" 
+                : "text-white/20 hover:bg-white/[0.01] hover:text-white/60"
             )}
           >
-            <item.icon size={18} className="mr-4 lg:mr-5 shrink-0" />
-            <span className="font-body font-medium">{item.label}</span>
-          </button>
+            {currentPage === item.id && (
+              <>
+                <motion.div 
+                  layoutId="active-pill"
+                  className="absolute left-0 w-1 h-8 bg-primary rounded-full shadow-[0_0_15px_rgba(255,107,0,0.8)]"
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent"></div>
+              </>
+            )}
+            <item.icon size={18} className={cn(
+              "mr-4 transition-all duration-500 relative z-10",
+              currentPage === item.id ? "scale-110 text-primary drop-shadow-[0_0_8px_rgba(255,107,0,0.5)]" : "group-hover:scale-110 group-hover:text-white group-hover:rotate-6"
+            )} />
+            <span className="font-body font-black tracking-[0.2em] relative z-10">{item.label}</span>
+          </motion.button>
         ))}
       </nav>
 
-      <div className="px-6 py-8 space-y-6">
+      <div className="px-6 py-8 space-y-6 relative z-10">
         {(userRole === 'admin' || currentPage === 'billing') && (
           <button 
             onClick={handleActionButton}
-            className="w-full py-4 bg-gradient-to-r from-primary to-primary-container text-on-primary font-black text-[10px] uppercase tracking-widest rounded-sm transition-transform active:scale-95 shadow-xl shadow-primary/10"
+            className="w-full py-4 bg-primary text-white font-black text-[10px] uppercase tracking-widest rounded-lg transition-all neo-button shadow-xl shadow-primary/20 hover:brightness-110 hover:-translate-y-0.5"
           >
             Ação Rápida BFV
           </button>
@@ -329,49 +352,44 @@ const App: React.FC = () => {
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col min-w-0 h-screen relative">
         {/* Header Principal Casa Mãe */}
-        <header className="h-20 lg:h-24 shrink-0 bg-surface/80 backdrop-blur-xl border-b border-outline-variant/10 flex items-center justify-between px-6 lg:px-12 z-50 sticky top-0">
+        <header className="h-20 lg:h-24 shrink-0 bg-surface/40 backdrop-blur-3xl border-b border-white/5 flex items-center justify-between px-6 lg:px-12 z-50 sticky top-0">
           <div className="flex items-center gap-6">
             <button 
                onClick={() => setIsMobileMenuOpen(true)}
-               className="lg:hidden p-3 bg-surface border border-outline-variant/10 text-primary shadow-lg"
+               className="lg:hidden p-3 bg-white/5 border border-white/10 text-primary shadow-2xl rounded-lg"
             >
               <Menu size={20} />
             </button>
             
             <div className="flex items-center gap-6 hidden sm:flex group cursor-pointer relative">
-              <div className="w-12 h-12 lg:w-14 lg:h-14 hover:rotate-6 transition-all duration-700 bg-white/5 p-2 border border-outline-variant/10">
-                <img 
-                  src="https://i.ibb.co/sdggPPwX/logo.png" 
-                  alt="A Casa Mãe" 
-                  className="w-full h-full object-contain"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-headline text-primary text-3xl lg:text-4xl tracking-tighter leading-none font-black drop-shadow-md text-glow">A CASA MÃE</span>
-                <span className="text-[7px] lg:text-[8px] text-secondary font-black uppercase tracking-[0.4em] mt-1">BFV-BEIB FRANCISCO VIANA</span>
-              </div>
+               <div className="flex flex-col">
+                 <span className="font-headline text-white text-3xl lg:text-4xl tracking-tighter leading-none font-bold drop-shadow-md group-hover:text-primary transition-colors">
+                   A CASA <span className="text-primary italic">MÃE</span>
+                 </span>
+                 <span className="text-[7px] lg:text-[8px] text-white/30 font-black uppercase tracking-[0.5em] mt-1 group-hover:text-secondary transition-colors">CENTRO DE OPERAÇÕES</span>
+               </div>
             </div>
             
-            <div className="relative flex items-center hidden sm:flex">
-              <Search className="absolute left-3 text-on-surface-variant/40" size={14} />
+            <div className="relative flex items-center hidden sm:flex group/search">
+              <Search className="absolute left-5 text-white/20 group-focus-within/search:text-primary transition-colors" size={14} />
               <input 
                 type="text" 
-                placeholder="Pesquisar BFV..." 
-                className="bg-surface-container-low border-none text-xs pl-10 pr-4 py-2 w-64 focus:ring-1 focus:ring-primary text-on-surface placeholder:text-on-surface-variant/20 rounded-sm"
+                placeholder="PROCURAR NO SISTEMA..." 
+                className="bg-white/[0.03] border border-white/5 text-[9px] font-black uppercase tracking-[0.2em] pl-14 pr-8 py-4 w-80 focus:outline-none focus:border-primary/50 focus:bg-white/[0.05] text-white placeholder:text-white/10 rounded-xl transition-all shadow-inner"
               />
+              <div className="absolute right-4 px-2 py-1 bg-white/[0.05] border border-white/10 rounded font-mono text-[8px] text-white/20">F_SRCH</div>
             </div>
           </div>
 
-          <div className="flex items-center gap-6 lg:gap-8">
+          <div className="flex items-center gap-6 lg:gap-10">
             <div className="relative">
               <button 
                 onClick={() => setIsNotificationTrayOpen(!isNotificationTrayOpen)}
-                className="relative text-on-surface-variant/60 hover:text-primary transition-colors"
+                className="relative p-3 bg-white/[0.03] border border-white/10 text-white/40 hover:text-primary transition-all rounded-xl shadow-xl group/bell"
               >
-                <Bell size={20} />
+                <Bell size={18} className="group-hover/bell:rotate-12 transition-transform" />
                 {notifications.some(n => !n.read) && (
-                  <span className="absolute top-0 right-0 w-2 h-2 bg-primary rounded-full ring-4 ring-surface"></span>
+                  <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-primary rounded-full ring-4 ring-black shadow-[0_0_10px_rgba(255,107,0,0.8)]"></span>
                 )}
               </button>
 
@@ -414,18 +432,22 @@ const App: React.FC = () => {
               )}
             </div>
 
-            <div className="flex items-center gap-4 pl-4 border-l border-outline-variant/10">
+            <div className="flex items-center gap-6 pl-8 border-l border-white/5 relative group/profile">
               <div className="text-right hidden sm:block">
-                <p className="text-xs font-headline tracking-wide leading-none">{user.user_metadata?.display_name || user.email?.split('@')[0] || 'Manager'}</p>
-                <p className="text-[9px] text-primary font-bold uppercase tracking-widest mt-1 opacity-60">
-                   {userRole === 'admin' ? 'Director Executivo' : 'Operações'}
-                </p>
+                <p className="text-xs font-bold font-headline tracking-tight text-white leading-none mb-1">{user.user_metadata?.display_name || user.email?.split('@')[0] || 'Manager'}</p>
+                <div className="flex items-center justify-end gap-2">
+                   <div className="w-1 h-1 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+                   <p className="text-[8px] text-primary font-black uppercase tracking-[0.2em] opacity-80">
+                      {userRole === 'admin' ? 'DIREÇÃO GERAL' : 'OPERACIONAL'}
+                   </p>
+                </div>
               </div>
-              <div className="h-10 w-10 rounded-sm bg-surface-container border border-outline-variant/20 flex items-center justify-center overflow-hidden shrink-0 shadow-lg grayscale hover:grayscale-0 transition-all duration-500">
+              <div className="h-14 w-14 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-center overflow-hidden shrink-0 shadow-2xl relative transition-transform duration-700 group-hover/profile:scale-110">
+                <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 via-transparent to-transparent"></div>
                 {user.user_metadata?.avatar_url ? (
-                  <img src={user.user_metadata.avatar_url} alt="Profile" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                  <img src={user.user_metadata.avatar_url} alt="Profile" className="h-full w-full object-cover grayscale hover:grayscale-0 transition-all duration-700" referrerPolicy="no-referrer" />
                 ) : (
-                  <span className="font-headline text-lg text-primary">{(user.user_metadata?.display_name?.[0] || user.email?.[0] || 'A').toUpperCase()}</span>
+                  <span className="font-headline text-2xl text-primary font-bold shadow-primary/20 drop-shadow-md">{(user.user_metadata?.display_name?.[0] || user.email?.[0] || 'A').toUpperCase()}</span>
                 )}
               </div>
             </div>
@@ -433,53 +455,67 @@ const App: React.FC = () => {
         </header>
 
         {/* Dynamic Content Canvas */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-10 relative z-10">
-           <div className="max-w-7xl mx-auto pb-12">
-               <div className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-                 <div>
-                    <h2 className="font-headline text-5xl lg:text-7xl font-black tracking-tight text-primary drop-shadow-md">
-                      {currentPage === 'comms' ? 'Tempo de Serviço' : 
-                       currentPage === 'guests' ? 'Registo de Hóspedes' :
-                       currentPage === 'dashboard' ? 'Centro de Comando' : 
-                       currentPage === 'mural' ? 'Mural BFV' :
-                       currentPage.charAt(0).toUpperCase() + currentPage.slice(1)}
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-12 relative z-10">
+           <div className="max-w-7xl mx-auto pb-24">
+               <div className="mb-14 flex flex-col md:flex-row justify-between items-start md:items-end gap-6 overflow-hidden">
+                 <motion.div
+                   initial={{ opacity: 0, y: 30 }}
+                   animate={{ opacity: 1, y: 0 }}
+                   transition={{ duration: 0.8, ease: "easeOut" }}
+                 >
+                    <h2 className="font-headline text-5xl lg:text-8xl font-black tracking-tighter text-white drop-shadow-2xl">
+                      {currentPage === 'comms' ? (
+                        <>TIME <span className="text-primary italic">SERVICE</span></>
+                      ) : currentPage === 'guests' ? (
+                         <>GESTÃO <span className="text-primary italic">CLIENTES</span></>
+                      ) : currentPage === 'dashboard' ? (
+                         <>COMMAND <span className="text-primary italic">CENTER</span></>
+                      ) : currentPage === 'mural' ? (
+                         <>SOCIAL <span className="text-primary italic">MURAL</span></>
+                      ) : (
+                        currentPage.toUpperCase()
+                      )}
                     </h2>
-                    <p className="font-body text-[11px] font-black uppercase tracking-[0.4em] text-secondary mt-4 flex items-center gap-3">
-                       <span className="w-12 h-0.5 bg-primary/40"></span>
-                       A CASA MÃE — BFV-BEIB FRANCISCO VIANA
+                    <p className="font-body text-[10px] font-black uppercase tracking-[0.6em] text-white/30 mt-6 flex items-center gap-4">
+                       <span className="w-16 h-px bg-primary/50"></span>
+                       SISTEMA OPERATIVO PRODUTO BFV
                     </p>
-                 </div>
+                 </motion.div>
               </div>
               
-              <div className="animate-in fade-in slide-in-from-bottom-2 duration-700">
+              <motion.div 
+                key={currentPage}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
                 {renderPage()}
-              </div>
+              </motion.div>
            </div>
         </div>
 
         {/* System Status & Watermark */}
-        <footer className="h-10 bg-surface-container-lowest border-t border-outline-variant/5 flex items-center justify-between px-8 text-[9px] uppercase tracking-[0.2em] text-on-surface-variant/20 shrink-0 relative">
-          <div className="flex items-center space-x-8">
-            <span className="flex items-center gap-2">
-               <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
-               Operacional
+        <footer className="h-16 bg-black/40 backdrop-blur-3xl border-t border-white/5 flex items-center justify-between px-12 text-[9px] font-mono uppercase tracking-[0.3em] text-white/20 shrink-0 relative z-50">
+          <div className="flex items-center space-x-12">
+            <span className="flex items-center gap-3">
+               <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.8)]"></div>
+               <span className="font-black text-emerald-500/80">CORE_SYSTEM_ACTIVE</span>
             </span>
-            <span className="hidden sm:inline">Latência: <span className="text-secondary/50 font-bold">12ms</span></span>
-            <span className="text-primary/40 font-black">Casa Mãe v2.4.0 BFV</span>
+            <span className="hidden sm:flex items-center gap-2">
+               NETWORK_LATENCY: <span className="text-secondary font-black">0.42ms</span>
+            </span>
+            <span className="text-primary/60 font-black px-3 py-1 bg-primary/5 border border-primary/10 rounded-lg">CASA_MÃE_v3.0.0_BFV</span>
           </div>
           
-          {/* Watermark Logo */}
-          <div className="absolute right-1/2 translate-x-1/2 bottom-2 h-12 opacity-10 pointer-events-none mix-blend-overlay">
-            <img 
-              src="https://i.ibb.co/BVY4mTqq/logo.png" 
-              alt="Casa Mãe Logo" 
-              className="h-full object-contain"
-              referrerPolicy="no-referrer"
-            />
+          {/* Central status line */}
+          <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.02] overflow-hidden">
+             <div className="whitespace-nowrap font-black font-headline text-2xl tracking-[2em]">AUDIT_STATUS_OK — SYSTEM_STABLE — CABINDA_HQ</div>
           </div>
 
-          <div className="flex items-center space-x-4">
-            <span>GMT {new Date().getHours()}:{new Date().getMinutes()}</span>
+          <div className="flex items-center space-x-8 relative z-10">
+            <span className="font-black">LOCAL_TIME {new Date().getHours().toString().padStart(2, '0')}:{new Date().getMinutes().toString().padStart(2, '0')}</span>
+            <div className="w-px h-6 bg-white/10"></div>
+            <span className="text-white/40">SEC_LEVEL_01</span>
           </div>
         </footer>
       </main>
