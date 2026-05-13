@@ -39,10 +39,13 @@ import {
   AlertTriangle,
   Info
 } from 'lucide-react';
-import { subscribeToNotifications, markNotificationAsRead } from './services/firestoreService';
-
-type Page = 'dashboard' | 'billing' | 'guests' | 'rooms' | 'reports' | 'settings' | 'comms' | 'staff' | 'mural';
-type UserRole = 'admin' | 'staff';
+import { 
+  subscribeToNotifications, 
+  markNotificationAsRead, 
+  subscribeToUsers, 
+  updateUser 
+} from './services/firestoreService';
+import { AppUser, Page, UserRole, Permission } from './types';
 
 const AppBackground = () => {
   const [index, setIndex] = useState(0);
@@ -83,64 +86,67 @@ const AppBackground = () => {
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
   const [user, setUser] = useState<User | null>(null);
+  const [appUser, setAppUser] = useState<AppUser | null>(null);
   const [userRole, setUserRole] = useState<UserRole>('admin');
   const [loading, setLoading] = useState(true);
   const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [isNotificationTrayOpen, setIsNotificationTrayOpen] = useState(false);
+  const [newName, setNewName] = useState('');
 
   useEffect(() => {
-    // Check for "Bypass" login first
-    const bypassData = localStorage.getItem('bfv_bypass_user');
-    if (bypassData) {
-      try {
-        const bypassUser = JSON.parse(bypassData);
-        setUser(bypassUser);
-        setUserRole('admin');
-        setLoading(false);
-        return; // Skip supabase check if bypass is active
-      } catch (e) {
-        localStorage.removeItem('bfv_bypass_user');
-      }
+    // Safety timeout for loading
+    const timeout = setTimeout(() => {
+      if (loading) setLoading(false);
+    }, 5000);
+
+    // Initial session check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
+  }, []);
+
+  // Sync Supabase Auth with Firestore User Data
+  useEffect(() => {
+    if (!user) {
+      setAppUser(null);
+      setLoading(false);
+      return;
     }
 
-    // Check initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        const isAdminEmail = session.user.email === 'valter1990vado@gmail.com' || session.user.email?.startsWith('valter');
+    const unsub = subscribeToUsers((allUsers) => {
+      const found = allUsers.find(u => u.uid === user.id);
+      if (found) {
+        setAppUser(found);
+        setUserRole(found.role);
+        setNewName(found.displayName || '');
+      } else {
+        // Fallback or initialization for new user
+        const isAdminEmail = user.email === 'valter1990vado@gmail.com' || user.email?.startsWith('valter');
         setUserRole(isAdminEmail ? 'admin' : 'staff');
       }
       setLoading(false);
     });
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      
-      const isAdminEmail = currentUser?.email === 'valter1990vado@gmail.com' || currentUser?.email?.startsWith('valter');
-      
-      if (isAdminEmail) {
-        setUserRole('admin');
-      } else {
-        setUserRole('staff');
-        if (['reports', 'staff', 'settings'].includes(currentPage)) {
-          setCurrentPage('dashboard');
-        }
-      }
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, [currentPage]);
+    return () => unsub();
+  }, [user]);
 
   useEffect(() => {
     if (user) {
-      // Temporarily disabling Firebase notification subscription until fully migrated to Supabase
-      // const unsub = subscribeToNotifications(user.id, setNotifications);
-      // return () => unsub();
+      const unsub = subscribeToNotifications(user.id, setNotifications);
+      return () => unsub();
     }
   }, [user]);
 
@@ -154,19 +160,24 @@ const App: React.FC = () => {
     }
   };
 
-  const navItems: readonly { id: Page; label: string; icon: any; roles: readonly UserRole[] }[] = [
-    { id: 'dashboard', label: 'Painel Central', icon: LayoutDashboard, roles: ['admin', 'staff'] },
-    { id: 'guests', label: 'Gestão de Clientes', icon: Users, roles: ['admin', 'staff'] },
-    { id: 'billing', label: 'Facturação', icon: FileText, roles: ['admin', 'staff'] },
-    { id: 'rooms', label: 'Gestão de Quartos', icon: BedDouble, roles: ['admin', 'staff'] },
-    { id: 'comms', label: 'Comunicações', icon: MessageSquare, roles: ['admin', 'staff'] },
-    { id: 'mural', label: 'Mural BFV', icon: Layout, roles: ['admin', 'staff'] },
-    { id: 'reports', label: 'Relatórios Avançados', icon: BarChart3, roles: ['admin'] },
-    { id: 'staff', label: 'Controlo de Equipa', icon: ShieldCheck, roles: ['admin'] },
-    { id: 'settings', label: 'Configurações', icon: Settings, roles: ['admin'] },
+  const navItems: readonly { id: Page; label: string; icon: any; roles: readonly UserRole[]; permissionId?: Permission }[] = [
+    { id: 'dashboard', label: 'Painel Central', icon: LayoutDashboard, roles: ['admin', 'staff'], permissionId: 'dashboard' },
+    { id: 'guests', label: 'Gestão de Clientes', icon: Users, roles: ['admin', 'staff'], permissionId: 'guests' },
+    { id: 'billing', label: 'Facturação', icon: FileText, roles: ['admin', 'staff'], permissionId: 'billing' },
+    { id: 'rooms', label: 'Gestão de Quartos', icon: BedDouble, roles: ['admin', 'staff'], permissionId: 'rooms' },
+    { id: 'comms', label: 'Comunicações', icon: MessageSquare, roles: ['admin', 'staff'], permissionId: 'comms' },
+    { id: 'mural', label: 'Mural BFV', icon: Layout, roles: ['admin', 'staff'], permissionId: 'mural' },
+    { id: 'reports', label: 'Relatórios Avançados', icon: BarChart3, roles: ['admin'], permissionId: 'reports' },
+    { id: 'staff', label: 'Controlo de Equipa', icon: ShieldCheck, roles: ['admin'], permissionId: 'staff' },
   ];
 
-  const accessibleNavItems = navItems.filter(item => (item.roles as readonly string[]).includes(userRole));
+  const accessibleNavItems = navItems.filter(item => {
+    if (userRole === 'admin') return true;
+    if (appUser?.permissions && item.permissionId) {
+      return appUser.permissions.includes(item.permissionId);
+    }
+    return (item.roles as readonly string[]).includes(userRole);
+  });
 
 
   const handleActionButton = () => {
@@ -306,15 +317,29 @@ const App: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-surface">
-        <div className="w-16 h-px bg-primary/20 relative overflow-hidden">
-          <div className="absolute inset-0 bg-primary animate-[loading_1.5s_infinite] origin-left"></div>
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-surface gap-8">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-24 h-24 bg-white p-4 rounded-2xl shadow-2xl relative"
+        >
+          <img src="https://i.ibb.co/sdggPPwX/logo.png" alt="Logo" className="w-full h-full object-contain" />
+          <div className="absolute -inset-4 bg-primary/20 blur-2xl rounded-full -z-10 animate-pulse"></div>
+        </motion.div>
+        
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-48 h-px bg-white/5 relative overflow-hidden rounded-full">
+            <div className="absolute inset-0 bg-primary animate-[loading_2s_infinite] origin-left shadow-[0_0_10px_rgba(255,107,0,0.5)]"></div>
+          </div>
+          <p className="font-body text-[8px] font-black uppercase tracking-[0.6em] text-primary/40 animate-pulse">
+            SISTEMA OPERATIVO CASA MÃE • A INICIALIZAR
+          </p>
         </div>
         <style>{`
           @keyframes loading {
-            0% { transform: scaleX(0); left: 0; }
-            50% { transform: scaleX(1); left: 0; }
-            100% { transform: scaleX(0); left: 100%; }
+            0% { transform: translateX(-100%) scaleX(0.2); }
+            50% { transform: translateX(0%) scaleX(1); }
+            100% { transform: translateX(100%) scaleX(0.2); }
           }
         `}</style>
       </div>
@@ -432,9 +457,12 @@ const App: React.FC = () => {
               )}
             </div>
 
-            <div className="flex items-center gap-6 pl-8 border-l border-white/5 relative group/profile">
+            <div 
+              className="flex items-center gap-6 pl-8 border-l border-white/5 relative group/profile cursor-pointer"
+              onClick={() => setIsProfileModalOpen(true)}
+            >
               <div className="text-right hidden sm:block">
-                <p className="text-xs font-bold font-headline tracking-tight text-white leading-none mb-1">{user.user_metadata?.display_name || user.email?.split('@')[0] || 'Manager'}</p>
+                <p className="text-xs font-bold font-headline tracking-tight text-white leading-none mb-1">{appUser?.displayName || user.email?.split('@')[0] || 'Manager'}</p>
                 <div className="flex items-center justify-end gap-2">
                    <div className="w-1 h-1 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
                    <p className="text-[8px] text-primary font-black uppercase tracking-[0.2em] opacity-80">
@@ -444,15 +472,72 @@ const App: React.FC = () => {
               </div>
               <div className="h-14 w-14 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-center overflow-hidden shrink-0 shadow-2xl relative transition-transform duration-700 group-hover/profile:scale-110">
                 <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 via-transparent to-transparent"></div>
-                {user.user_metadata?.avatar_url ? (
-                  <img src={user.user_metadata.avatar_url} alt="Profile" className="h-full w-full object-cover grayscale hover:grayscale-0 transition-all duration-700" referrerPolicy="no-referrer" />
+                {appUser?.photoURL ? (
+                  <img src={appUser.photoURL} alt="Profile" className="h-full w-full object-cover grayscale hover:grayscale-0 transition-all duration-700" referrerPolicy="no-referrer" />
                 ) : (
-                  <span className="font-headline text-2xl text-primary font-bold shadow-primary/20 drop-shadow-md">{(user.user_metadata?.display_name?.[0] || user.email?.[0] || 'A').toUpperCase()}</span>
+                  <span className="font-headline text-2xl text-primary font-bold shadow-primary/20 drop-shadow-md">{(appUser?.displayName?.[0] || user.email?.[0] || 'A').toUpperCase()}</span>
                 )}
               </div>
             </div>
           </div>
         </header>
+
+        {/* Profile Modal */}
+        <AnimatePresence>
+          {isProfileModalOpen && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 sm:p-12">
+               <motion.div 
+                 initial={{ opacity: 0 }}
+                 animate={{ opacity: 1 }}
+                 exit={{ opacity: 0 }}
+                 onClick={() => setIsProfileModalOpen(false)}
+                 className="absolute inset-0 bg-black/80 backdrop-blur-md"
+               />
+               <motion.div 
+                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                 animate={{ opacity: 1, scale: 1, y: 0 }}
+                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                 className="w-full max-w-md bg-surface-container border border-white/10 p-10 lg:p-12 relative z-10 shadow-3xl"
+               >
+                  <button 
+                    onClick={() => setIsProfileModalOpen(false)}
+                    className="absolute top-8 right-8 text-white/20 hover:text-white transition-colors"
+                  >
+                    <X size={24} />
+                  </button>
+
+                  <h3 className="font-headline text-4xl italic text-primary mb-10 tracking-tight">Editar Perfil</h3>
+                  
+                  <div className="space-y-8">
+                     <div className="space-y-3">
+                        <label className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">Identidade no Sistema</label>
+                        <input 
+                          type="text" 
+                          value={newName}
+                          onChange={(e) => setNewName(e.target.value)}
+                          className="w-full bg-white/[0.03] border border-white/10 px-6 py-4 text-white text-sm focus:outline-none focus:border-primary transition-all rounded-lg font-headline italic text-xl"
+                          placeholder="Nome Completo"
+                        />
+                     </div>
+                     
+                     <div className="pt-6 border-t border-white/5">
+                        <button 
+                          onClick={async () => {
+                            if (appUser) {
+                              await updateUser(appUser.id, { displayName: newName });
+                              setIsProfileModalOpen(false);
+                            }
+                          }}
+                          className="w-full py-5 bg-primary text-white font-black text-xs uppercase tracking-[0.3em] rounded-lg shadow-2xl shadow-primary/20 hover:brightness-110 hover:-translate-y-1 transition-all neo-button"
+                        >
+                          Atualizar Identidade
+                        </button>
+                     </div>
+                  </div>
+               </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
 
         {/* Dynamic Content Canvas */}
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-12 relative z-10">

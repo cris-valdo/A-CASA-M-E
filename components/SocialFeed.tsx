@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Camera, 
   Video, 
@@ -10,7 +11,8 @@ import {
   Image as ImageIcon,
   MoreHorizontal,
   Plus,
-  Activity
+  Activity,
+  X
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { subscribeToPosts, createPost } from '../services/firestoreService';

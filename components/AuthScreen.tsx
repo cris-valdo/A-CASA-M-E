@@ -10,6 +10,7 @@ const AuthScreen: React.FC = () => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
 
   const images = [
@@ -70,6 +71,11 @@ const AuthScreen: React.FC = () => {
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: finalId,
           password: password,
+          options: {
+            data: {
+              display_name: displayName,
+            }
+          }
         });
         if (signUpError) throw signUpError;
         
@@ -101,7 +107,7 @@ const AuthScreen: React.FC = () => {
   const logoUrl = "https://i.ibb.co/sdggPPwX/logo.png";
 
   return (
-    <div className="min-h-screen bg-surface flex flex-col items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-surface flex flex-col items-center justify-center p-4 relative overflow-y-auto">
       {/* Background Gallery & Atmospheric Gradients */}
       <div className="absolute inset-0 z-0">
         <AnimatePresence mode="wait">
@@ -169,6 +175,29 @@ const AuthScreen: React.FC = () => {
         {/* Form Content */}
         <div className="p-10 space-y-8 bg-black/40">
            <div className="space-y-6">
+              {isRegistering && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="space-y-3"
+                >
+                  <div className="flex justify-between items-center px-1">
+                     <label className="text-[9px] font-black uppercase tracking-[0.3em] text-white/40">Full Name / Agent ID</label>
+                  </div>
+                  <div className="relative group">
+                    <ShieldCheck className="absolute left-5 top-1/2 -translate-y-1/2 text-primary/40 group-focus-within:text-primary transition-colors" size={16} />
+                    <input 
+                      type="text" 
+                      placeholder="NOME COMPLETO"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      className="w-full bg-white/[0.03] border border-white/10 h-16 pl-14 pr-6 text-xs font-bold font-mono tracking-widest outline-none focus:border-primary/50 focus:bg-white/[0.05] transition-all text-white placeholder:text-white/10 rounded-xl"
+                      required={isRegistering}
+                    />
+                  </div>
+                </motion.div>
+              )}
+
               <div className="space-y-3">
                 <div className="flex justify-between items-center px-1">
                    <label className="text-[9px] font-black uppercase tracking-[0.3em] text-white/40">Access Identifier</label>

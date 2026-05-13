@@ -10,20 +10,39 @@ import {
   Plus,
   Mail,
   Shield,
-  Activity
+  Activity,
+  Edit2,
+  Check,
+  X,
+  Lock
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { 
   subscribeToUsers, 
   updateUserStatus, 
   deleteUser, 
-  updateUserRole 
+  updateUser
 } from '../services/firestoreService';
+import { AppUser, Permission } from '../types';
 
 const StaffManagement: React.FC = () => {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<AppUser[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editPermissions, setEditPermissions] = useState<Permission[]>([]);
+
+  const availablePermissions: { id: Permission, label: string }[] = [
+    { id: 'dashboard', label: 'Painel Central' },
+    { id: 'guests', label: 'Gestão de Clientes' },
+    { id: 'billing', label: 'Facturação' },
+    { id: 'rooms', label: 'Gestão de Quartos' },
+    { id: 'comms', label: 'Comunicações' },
+    { id: 'mural', label: 'Mural BFV' },
+    { id: 'reports', label: 'Relatórios' },
+    { id: 'staff', label: 'Equipa' },
+  ];
 
   useEffect(() => {
     const unsub = subscribeToUsers((data) => {
@@ -41,7 +60,7 @@ const StaffManagement: React.FC = () => {
   const handleToggleStatus = async (userId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'blocked' : 'active';
     try {
-      await updateUserStatus(userId, newStatus);
+      await updateUserStatus(userId, newStatus as any);
     } catch (error) {
       console.error("Error updating status:", error);
     }
@@ -57,10 +76,36 @@ const StaffManagement: React.FC = () => {
     }
   };
 
+  const startEditing = (user: AppUser) => {
+    setEditingUserId(user.id);
+    setEditName(user.displayName || '');
+    setEditPermissions(user.permissions || []);
+  };
+
+  const saveEdit = async (userId: string) => {
+    try {
+      await updateUser(userId, {
+        displayName: editName,
+        permissions: editPermissions
+      });
+      setEditingUserId(null);
+    } catch (error) {
+      console.error("Error saving user data:", error);
+    }
+  };
+
+  const togglePermission = (permId: Permission) => {
+    setEditPermissions(prev => 
+      prev.includes(permId) 
+        ? prev.filter(p => p !== permId) 
+        : [...prev, permId]
+    );
+  };
+
   const handleToggleRole = async (userId: string, currentRole: string) => {
     const newRole = currentRole === 'admin' ? 'staff' : 'admin';
     try {
-      await updateUserRole(userId, newRole);
+      await updateUser(userId, { role: newRole });
     } catch (error) {
       console.error("Error updating role:", error);
     }
@@ -130,7 +175,7 @@ const StaffManagement: React.FC = () => {
                    </tr>
                 ) : filteredUsers.length === 0 ? (
                    <tr>
-                      <td colSpan={4} className="px-10 py-20 text-center font-headline italic text-2xl text-on-surface-variant/20 text-on-surface-variant/20 italic">Nenhum Operacional Encontrado</td>
+                      <td colSpan={4} className="px-10 py-20 text-center font-headline italic text-2xl text-on-surface-variant/20 italic">Nenhum Operacional Encontrado</td>
                    </tr>
                 ) : (
                    filteredUsers.map((u) => (
@@ -140,9 +185,50 @@ const StaffManagement: React.FC = () => {
                                <div className="w-12 h-12 bg-surface-bright border border-outline-variant/10 flex items-center justify-center grayscale hover:grayscale-0 transition-all overflow-hidden shrink-0">
                                   {u.photoURL ? <img src={u.photoURL} alt="" className="w-full h-full object-cover" /> : <span className="font-headline italic text-primary text-xl">{u.displayName?.[0] || 'A'}</span>}
                                </div>
-                               <div>
-                                  <p className="font-headline italic text-xl text-on-surface group-hover:text-primary transition-colors leading-tight">{u.displayName || 'Agente Anónimo'}</p>
+                               <div className="flex-1 min-w-[200px]">
+                                  {editingUserId === u.id ? (
+                                    <input 
+                                      type="text"
+                                      value={editName}
+                                      onChange={(e) => setEditName(e.target.value)}
+                                      className="bg-transparent border-b border-primary text-xl font-headline italic focus:outline-none w-full text-on-surface mb-2"
+                                      autoFocus
+                                    />
+                                  ) : (
+                                    <p className="font-headline italic text-xl text-on-surface group-hover:text-primary transition-colors leading-tight">
+                                      {u.displayName || 'Agente Anónimo'}
+                                    </p>
+                                  )}
                                   <p className="font-body text-[9px] text-on-surface-variant/40 font-bold uppercase mt-1 tracking-widest">{u.email}</p>
+                                  
+                                  {editingUserId === u.id && (
+                                    <div className="mt-4 flex flex-wrap gap-2">
+                                      {availablePermissions.map(perm => (
+                                        <button
+                                          key={perm.id}
+                                          type="button"
+                                          onClick={() => togglePermission(perm.id)}
+                                          className={cn(
+                                            "px-2 py-1 text-[8px] font-black uppercase tracking-widest border transition-all",
+                                            editPermissions.includes(perm.id) 
+                                              ? "bg-primary/20 border-primary text-primary" 
+                                              : "bg-surface border-outline-variant/10 text-on-surface/20 hover:text-on-surface/40"
+                                          )}
+                                        >
+                                          {perm.label}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {!editingUserId && u.permissions && u.permissions.length > 0 && (
+                                    <div className="mt-2 flex flex-wrap gap-1">
+                                      {u.permissions.map(p => (
+                                        <span key={p} className="text-[7px] text-primary/40 font-bold uppercase tracking-tighter border border-primary/10 px-1">
+                                          {availablePermissions.find(ap => ap.id === p)?.label}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
                                </div>
                             </div>
                          </td>
@@ -169,19 +255,50 @@ const StaffManagement: React.FC = () => {
                             </div>
                          </td>
                          <td className="px-10 py-7 text-right">
-                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                               <button 
-                                 onClick={() => handleToggleStatus(u.id, u.status)}
-                                 className="p-3 text-on-surface-variant/40 hover:text-primary transition-all rounded-sm hover:bg-primary/5"
-                               >
-                                  {u.status === 'active' ? <UserMinus size={16} /> : <UserCheck size={16} />}
-                               </button>
-                               <button 
-                                 onClick={() => handleDeleteUser(u.id)}
-                                 className="p-3 text-on-surface-variant/40 hover:text-primary transition-all rounded-sm hover:bg-primary/5"
-                               >
-                                  <Trash2 size={16} />
-                               </button>
+                            <div className={cn(
+                              "flex items-center justify-end gap-2 transition-opacity",
+                              editingUserId === u.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                            )}>
+                               {editingUserId === u.id ? (
+                                 <>
+                                   <button 
+                                     onClick={() => saveEdit(u.id)}
+                                     className="p-3 text-emerald-400 hover:bg-emerald-400/5 transition-all rounded-sm"
+                                     title="Gravar"
+                                   >
+                                      <Check size={16} />
+                                   </button>
+                                   <button 
+                                     onClick={() => setEditingUserId(null)}
+                                     className="p-3 text-primary hover:bg-primary/5 transition-all rounded-sm"
+                                     title="Cancelar"
+                                   >
+                                      <X size={16} />
+                                   </button>
+                                 </>
+                               ) : (
+                                 <>
+                                   <button 
+                                     onClick={() => startEditing(u)}
+                                     className="p-3 text-on-surface-variant/40 hover:text-primary transition-all rounded-sm hover:bg-primary/5"
+                                     title="Editar"
+                                   >
+                                      <Edit2 size={16} />
+                                   </button>
+                                   <button 
+                                     onClick={() => handleToggleStatus(u.id, u.status)}
+                                     className="p-3 text-on-surface-variant/40 hover:text-primary transition-all rounded-sm hover:bg-primary/5"
+                                   >
+                                      {u.status === 'active' ? <UserMinus size={16} /> : <UserCheck size={16} />}
+                                   </button>
+                                   <button 
+                                     onClick={() => handleDeleteUser(u.id)}
+                                     className="p-3 text-on-surface-variant/40 hover:text-primary transition-all rounded-sm hover:bg-primary/5"
+                                   >
+                                      <Trash2 size={16} />
+                                   </button>
+                                 </>
+                               )}
                             </div>
                          </td>
                       </tr>

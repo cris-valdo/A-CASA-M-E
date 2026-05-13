@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MoreVertical, 
   Mail, 
@@ -8,13 +9,17 @@ import {
   History,
   Edit,
   Trash2,
-  Plus
+  Plus,
+  Check,
+  X as XIcon
 } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { subscribeToGuests } from '../services/firestoreService';
+import { subscribeToGuests, updateGuest, deleteGuest } from '../services/firestoreService';
 
 const GuestTable: React.FC = () => {
   const [guests, setGuests] = useState<any[]>([]);
+  const [editingGuestId, setEditingGuestId] = useState<string | null>(null);
+  const [editData, setEditData] = useState<any>({});
 
   useEffect(() => {
     const unsubscribe = subscribeToGuests((data) => {
@@ -22,6 +27,26 @@ const GuestTable: React.FC = () => {
     });
     return () => unsubscribe();
   }, []);
+
+  const handleStartEdit = (guest: any) => {
+    setEditingGuestId(guest.id);
+    setEditData({ ...guest });
+  };
+
+  const handleSaveEdit = async (id: string) => {
+    try {
+      await updateGuest(id, editData);
+      setEditingGuestId(null);
+    } catch (error) {
+      console.error("Update failed:", error);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm("Tens a certeza que desejas remover este hóspede?")) {
+      await deleteGuest(id);
+    }
+  };
 
   return (
     <div className="glass-card shadow-[0_50px_100px_-20px_rgba(0,0,0,0.8)] relative overflow-hidden rounded-[2rem]">
@@ -72,10 +97,19 @@ const GuestTable: React.FC = () => {
                        <td className="px-12 py-10">
                           <div className="flex items-center gap-8">
                              <div className="shrink-0 w-16 h-16 bg-white/[0.03] border border-white/10 flex items-center justify-center text-primary font-headline text-3xl font-bold rounded-2xl group-hover:rotate-12 transition-transform duration-500 shadow-xl group-hover:bg-primary group-hover:text-white">
-                                <span>{guest.name?.[0] || 'G'}</span>
+                                <span>{(editingGuestId === guest.id ? editData.name?.[0] : guest.name?.[0]) || 'G'}</span>
                              </div>
                              <div>
-                                <div className="font-headline text-white text-2xl font-bold tracking-tight group-hover:text-primary transition-colors leading-none mb-2">{guest.name || 'Hóspede Anónimo'}</div>
+                                {editingGuestId === guest.id ? (
+                                  <input 
+                                    value={editData.name}
+                                    onChange={e => setEditData({...editData, name: e.target.value})}
+                                    className="bg-transparent border-b border-primary font-headline text-white text-2xl font-bold focus:outline-none w-full"
+                                    autoFocus
+                                  />
+                                ) : (
+                                  <div className="font-headline text-white text-2xl font-bold tracking-tight group-hover:text-primary transition-colors leading-none mb-2">{guest.name || 'Hóspede Anónimo'}</div>
+                                )}
                                 <div className="flex items-center gap-4">
                                    <span className="font-mono text-[8px] text-white/20 uppercase tracking-widest">{guest.id?.slice(0, 12)}</span>
                                    <div className="w-1 h-1 bg-primary rounded-full animate-pulse"></div>
@@ -87,30 +121,82 @@ const GuestTable: React.FC = () => {
                        <td className="px-12 py-10">
                           <div className="space-y-3 font-mono text-[11px] text-white/40">
                              <div className="flex items-center gap-4 group/item">
-                                <div className="p-2 bg-white/[0.02] rounded-lg group-hover/item:text-primary transition-colors">
+                                <div className="p-2 bg-white/[0.02] rounded-lg group-hover/item:text-primary transition-colors text-white/20">
                                    <Mail size={12} />
                                 </div>
-                                <span className="tracking-widest font-bold grayscale group-hover:grayscale-0">{guest.email || '—'}</span>
+                                {editingGuestId === guest.id ? (
+                                  <input 
+                                    value={editData.email}
+                                    onChange={e => setEditData({...editData, email: e.target.value})}
+                                    className="bg-transparent border-b border-primary/20 focus:border-primary focus:outline-none w-full"
+                                  />
+                                ) : (
+                                  <span className="tracking-widest font-bold grayscale group-hover:grayscale-0">{guest.email || '—'}</span>
+                                )}
                              </div>
                              <div className="flex items-center gap-4 group/item">
-                                <div className="p-2 bg-white/[0.02] rounded-lg group-hover/item:text-secondary transition-colors">
+                                <div className="p-2 bg-white/[0.02] rounded-lg group-hover/item:text-secondary transition-colors text-white/20">
                                    <Phone size={12} />
                                 </div>
-                                <span className="tracking-widest font-bold grayscale group-hover:grayscale-0">{guest.phone || '—'}</span>
+                                {editingGuestId === guest.id ? (
+                                  <input 
+                                    value={editData.phone}
+                                    onChange={e => setEditData({...editData, phone: e.target.value})}
+                                    className="bg-transparent border-b border-primary/20 focus:border-primary focus:outline-none w-full"
+                                  />
+                                ) : (
+                                  <span className="tracking-widest font-bold grayscale group-hover:grayscale-0">{guest.phone || '—'}</span>
+                                )}
                              </div>
                           </div>
                        </td>
                        <td className="px-12 py-10 text-center">
-                          <span className="font-mono text-[10px] font-black text-white/60 bg-white/[0.03] px-6 py-3 border border-white/5 rounded-xl tracking-[0.2em] shadow-inner">{guest.nif || 'SEC_UNRESOLVED'}</span>
+                          {editingGuestId === guest.id ? (
+                            <input 
+                              value={editData.nif}
+                              onChange={e => setEditData({...editData, nif: e.target.value})}
+                              className="bg-transparent border-b border-primary font-mono text-[10px] font-black text-white/60 focus:outline-none text-center"
+                            />
+                          ) : (
+                            <span className="font-mono text-[10px] font-black text-white/60 bg-white/[0.03] px-6 py-3 border border-white/5 rounded-xl tracking-[0.2em] shadow-inner">{guest.nif || 'SEC_UNRESOLVED'}</span>
+                          )}
                        </td>
                        <td className="px-12 py-10 text-right">
-                          <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                             <button className="w-12 h-12 flex items-center justify-center bg-white/[0.05] text-white/40 hover:text-primary hover:bg-white/[0.1] transition-all rounded-xl shadow-xl">
-                                <Edit size={16} />
-                             </button>
-                             <button className="w-12 h-12 flex items-center justify-center bg-white/[0.05] text-white/40 hover:text-red-500 hover:bg-white/[0.1] transition-all rounded-xl shadow-xl">
-                                <Trash2 size={16} />
-                             </button>
+                          <div className={cn(
+                            "flex items-center justify-end gap-3 transition-opacity",
+                            editingGuestId === guest.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                          )}>
+                             {editingGuestId === guest.id ? (
+                               <>
+                                 <button 
+                                   onClick={() => handleSaveEdit(guest.id)}
+                                   className="w-12 h-12 flex items-center justify-center bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 transition-all rounded-xl shadow-xl"
+                                 >
+                                    <Check size={16} />
+                                 </button>
+                                 <button 
+                                   onClick={() => setEditingGuestId(null)}
+                                   className="w-12 h-12 flex items-center justify-center bg-white/[0.05] text-white/40 hover:text-white transition-all rounded-xl shadow-xl"
+                                 >
+                                    <XIcon size={16} />
+                                 </button>
+                               </>
+                             ) : (
+                               <>
+                                 <button 
+                                   onClick={() => handleStartEdit(guest)}
+                                   className="w-12 h-12 flex items-center justify-center bg-white/[0.05] text-white/40 hover:text-primary hover:bg-white/[0.1] transition-all rounded-xl shadow-xl"
+                                 >
+                                    <Edit size={16} />
+                                 </button>
+                                 <button 
+                                   onClick={() => handleDelete(guest.id)}
+                                   className="w-12 h-12 flex items-center justify-center bg-white/[0.05] text-white/40 hover:text-red-500 hover:bg-white/[0.1] transition-all rounded-xl shadow-xl"
+                                 >
+                                    <Trash2 size={16} />
+                                 </button>
+                               </>
+                             )}
                           </div>
                        </td>
                     </motion.tr>

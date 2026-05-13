@@ -42,6 +42,11 @@ export const updateUserRole = async (userId: string, role: 'admin' | 'staff') =>
   return await updateDoc(userRef, { role, updatedAt: serverTimestamp() });
 };
 
+export const updateUser = async (userId: string, data: Partial<any>) => {
+  const userRef = doc(db, 'users', userId);
+  return await updateDoc(userRef, { ...data, updatedAt: serverTimestamp() });
+};
+
 // Social Feed (Mural BFV)
 export const subscribeToPosts = (callback: (posts: any[]) => void) => {
   const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
@@ -107,6 +112,15 @@ export const addGuest = async (guest: Omit<Guest, 'id'>) => {
     ...guest,
     createdAt: serverTimestamp()
   });
+};
+
+export const updateGuest = async (guestId: string, data: Partial<Guest>) => {
+  const guestRef = doc(db, 'guests', guestId);
+  return await updateDoc(guestRef, { ...data, updatedAt: serverTimestamp() });
+};
+
+export const deleteGuest = async (guestId: string) => {
+  return await deleteDoc(doc(db, 'guests', guestId));
 };
 
 // Rooms
