@@ -99,17 +99,43 @@ const App: React.FC = () => {
   useEffect(() => {
     // Safety timeout for loading
     const timeout = setTimeout(() => {
-      if (loading) setLoading(false);
+      if (loading) {
+        console.warn("Loading timeout reached - forcing state release");
+        setLoading(false);
+      }
     }, 5000);
+
+    // Check for "Bypass" login first (Local Storage)
+    const bypassData = localStorage.getItem('bfv_bypass_user');
+    if (bypassData) {
+      try {
+        const bypassUser = JSON.parse(bypassData);
+        setUser(bypassUser);
+        setUserRole('admin');
+        setLoading(false);
+        return () => clearTimeout(timeout);
+      } catch (e) {
+        localStorage.removeItem('bfv_bypass_user');
+      }
+    }
 
     // Initial session check
     supabase.auth.getSession().then(({ data: { session } }) => {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
+      if (currentUser) {
+        const isAdminEmail = currentUser.email === 'valter1990vado@gmail.com' || currentUser.email?.startsWith('valter');
+        if (isAdminEmail) setUserRole('admin');
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) {
+        const isAdminEmail = currentUser.email === 'valter1990vado@gmail.com' || currentUser.email?.startsWith('valter');
+        if (isAdminEmail) setUserRole('admin');
+      }
     });
 
     return () => {
@@ -128,15 +154,23 @@ const App: React.FC = () => {
 
     const unsub = subscribeToUsers((allUsers) => {
       const found = allUsers.find(u => u.uid === user.id);
+      
+      // Secondary safety: check email again even if not in Firestore
+      const isAdminEmail = user.email === 'valter1990vado@gmail.com' || user.email?.startsWith('valter');
+
       if (found) {
         setAppUser(found);
         setUserRole(found.role);
         setNewName(found.displayName || '');
       } else {
         // Fallback or initialization for new user
-        const isAdminEmail = user.email === 'valter1990vado@gmail.com' || user.email?.startsWith('valter');
         setUserRole(isAdminEmail ? 'admin' : 'staff');
       }
+      setLoading(false);
+    }, (error) => {
+      console.error("Firestore sync error:", error);
+      const isAdminEmail = user.email === 'valter1990vado@gmail.com' || user.email?.startsWith('valter');
+      setUserRole(isAdminEmail ? 'admin' : 'staff');
       setLoading(false);
     });
 

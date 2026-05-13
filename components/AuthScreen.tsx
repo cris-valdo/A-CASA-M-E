@@ -264,6 +264,21 @@ const AuthScreen: React.FC = () => {
                 <div className="h-px flex-1 bg-white/5"></div>
               </div>
 
+              {/* Dev Bypass Button */}
+              <button 
+                onClick={() => {
+                  setEmail('admin');
+                  setPassword('admin');
+                  setTimeout(() => {
+                    const event = { preventDefault: () => {} } as React.FormEvent;
+                    handleEmailAuth(event);
+                  }, 100);
+                }}
+                className="w-full py-4 border border-primary/20 text-primary/60 hover:text-primary hover:bg-primary/5 transition-all text-[9px] font-black uppercase tracking-[0.4em] rounded-xl mb-2"
+              >
+                Acesso Direto Direção (Dev Mode)
+              </button>
+
               <button 
                 onClick={handleGoogleLogin}
                 disabled={isLoading}

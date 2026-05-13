@@ -17,7 +17,7 @@ import { db } from '../lib/firebase';
 import { Guest, Room, Invoice } from '../types';
 
 // System Users Management (Admin Priority)
-export const subscribeToUsers = (callback: (users: any[]) => void) => {
+export const subscribeToUsers = (callback: (users: any[]) => void, onError?: (error: any) => void) => {
   const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
   return onSnapshot(q, (snapshot) => {
     const users = snapshot.docs.map(doc => ({
@@ -25,6 +25,9 @@ export const subscribeToUsers = (callback: (users: any[]) => void) => {
       ...doc.data()
     }));
     callback(users);
+  }, (error) => {
+    console.error("Error in users subscription:", error);
+    if (onError) onError(error);
   });
 };
 
